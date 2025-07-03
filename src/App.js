@@ -94,14 +94,16 @@ function App() {
     try {
       const payload = { ...values, credit: Number(values.credit) };
       const response = await axios.post(`${API_BASE}/keys`, payload);
+      console.log('Tạo key trả về:', response.data);
       setNewKey(response.data.key);
       message.success(`Tạo key thành công: ${response.data.key}`);
       addAuditLog(`Tạo key mới: ${response.data.key} (credit: ${payload.credit})`);
       setShowCreateModal(false);
       form.resetFields();
-      fetchKeys();
+      await fetchKeys();
     } catch (err) {
       message.error("Tạo key thất bại!");
+      console.error('Lỗi tạo key:', err);
     }
     setActionLoading(false);
   };
@@ -154,13 +156,15 @@ function App() {
     }
     setActionLoading(true);
     try {
-      await axios.post(`${API_BASE}/keys/update-credit`, { key: selectedKey, amount: Number(creditAmount) });
+      const res = await axios.post(`${API_BASE}/keys/update-credit`, { key: selectedKey, amount: Number(creditAmount) });
+      console.log('Cập nhật credit trả về:', res.data);
       message.success('Cập nhật credit thành công!');
       addAuditLog(`Cập nhật credit cho key: ${selectedKey} (${creditAmount > 0 ? '+' : ''}${creditAmount})`);
       setShowCreditModal(false);
-      fetchKeys();
+      await fetchKeys();
     } catch (err) {
       message.error('Cập nhật credit thất bại!');
+      console.error('Lỗi cập nhật credit:', err);
     }
     setActionLoading(false);
   };
