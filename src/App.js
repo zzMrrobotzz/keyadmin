@@ -221,6 +221,9 @@ function App() {
             <Form.Item label="Số máy tối đa" name="maxActivations" initialValue={1}>
               <Input type="number" min={1} />
             </Form.Item>
+            <Form.Item label="Số credit" name="credit" initialValue={0} rules={[{ type: 'number', min: 0, message: 'Credit phải >= 0' }]}>
+              <Input type="number" min={0} placeholder="Nhập số credit cho key (mặc định 0)" />
+            </Form.Item>
             <Form.Item label="Ghi chú" name="note">
               <Input />
             </Form.Item>
