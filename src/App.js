@@ -21,7 +21,6 @@ function App() {
   const [search, setSearch] = useState("");
   const [filteredKeys, setFilteredKeys] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [confirmLoading, setConfirmLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form] = Form.useForm();
 
@@ -83,7 +82,6 @@ function App() {
   const handleRevokeKey = async (key) => {
     // Hiện hộp thoại xác nhận đơn giản của trình duyệt
     if (window.confirm(`Bạn chắc chắn muốn thu hồi key này?\n${key}`)) {
-      setConfirmLoading(true);
       try {
         const res = await axios.post(`${API_BASE}/keys/revoke`, { key });
         message.success("Đã thu hồi key!");
@@ -91,7 +89,6 @@ function App() {
       } catch (err) {
         message.error("Thu hồi key thất bại!");
       }
-      setConfirmLoading(false);
     }
   };
 
