@@ -144,6 +144,12 @@ function App() {
       render: (num) => num || 1,
     },
     {
+      title: "Số credit",
+      dataIndex: "credit",
+      key: "credit",
+      render: (num) => num ?? 0,
+    },
+    {
       title: "Ghi chú",
       dataIndex: "note",
       key: "note",
