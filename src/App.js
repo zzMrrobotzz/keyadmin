@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Table, Button, message, Tag, Space, Modal, Input, Select, Form, Card } from "antd";
+import { Table, Button, message, Tag, Space, Modal, Input, Select, Form, Card, DatePicker, Spin, Badge, Tooltip, Drawer, List } from "antd";
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { saveAs } from 'file-saver';
 
 const API_BASE = "https://key-manager-backend.onrender.com/api";
 
@@ -28,6 +29,13 @@ function App() {
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
   const [creditAmount, setCreditAmount] = useState(0);
+  const [creditFilter, setCreditFilter] = useState('');
+  const [creditFilterType, setCreditFilterType] = useState('>=');
+  const [createdAtRange, setCreatedAtRange] = useState([]);
+  const [expiredAtRange, setExpiredAtRange] = useState([]);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [auditLog, setAuditLog] = useState([]);
+  const [showLogDrawer, setShowLogDrawer] = useState(false);
 
   // Thống kê tổng quan
   const now = new Date();
@@ -78,32 +86,40 @@ function App() {
     setNewKey(null);
   };
 
+  // Thêm log thao tác
+  const addAuditLog = (msg) => setAuditLog(logs => [{ msg, time: new Date().toLocaleString() }, ...logs]);
+
   // Hàm submit form tạo key mới
   const handleCreateKeySubmit = async (values) => {
+    setActionLoading(true);
     try {
       const payload = { ...values, credit: Number(values.credit) };
       const response = await axios.post(`${API_BASE}/keys`, payload);
       setNewKey(response.data.key);
       message.success(`Tạo key thành công: ${response.data.key}`);
+      addAuditLog(`Tạo key mới: ${response.data.key} (credit: ${payload.credit})`);
       setShowCreateModal(false);
       form.resetFields();
       fetchKeys();
     } catch (err) {
       message.error("Tạo key thất bại!");
     }
+    setActionLoading(false);
   };
 
   // Thu hồi/khoá key
   const handleRevokeKey = async (key) => {
-    // Hiện hộp thoại xác nhận đơn giản của trình duyệt
     if (window.confirm(`Bạn chắc chắn muốn thu hồi key này?\n${key}`)) {
+      setActionLoading(true);
       try {
         await axios.post(`${API_BASE}/keys/revoke`, { key });
         message.success("Đã thu hồi key!");
-        fetchKeys(); // Cập nhật lại danh sách key
+        addAuditLog(`Thu hồi key: ${key}`);
+        fetchKeys();
       } catch (err) {
         message.error("Thu hồi key thất bại!");
       }
+      setActionLoading(false);
     }
   };
 
@@ -137,14 +153,91 @@ function App() {
       message.error('Vui lòng nhập số credit khác 0!');
       return;
     }
+    setActionLoading(true);
     try {
       await axios.post(`${API_BASE}/keys/update-credit`, { key: selectedKey, amount: Number(creditAmount) });
       message.success('Cập nhật credit thành công!');
+      addAuditLog(`Cập nhật credit cho key: ${selectedKey} (${creditAmount > 0 ? '+' : ''}${creditAmount})`);
       setShowCreditModal(false);
       fetchKeys();
     } catch (err) {
       message.error('Cập nhật credit thất bại!');
     }
+    setActionLoading(false);
+  };
+
+  // Lọc nâng cao
+  const handleAdvancedFilter = (value, type) => {
+    let filtered = keys;
+    // Lọc theo trạng thái
+    if (statusFilter === "active") filtered = filtered.filter((k) => k.isActive);
+    else if (statusFilter === "revoked") filtered = filtered.filter((k) => !k.isActive);
+    // Lọc theo credit
+    if (creditFilter !== "") {
+      const num = Number(creditFilter);
+      if (!isNaN(num)) {
+        if (creditFilterType === ">=") filtered = filtered.filter(k => (Number(k.credit) || 0) >= num);
+        else if (creditFilterType === "<=") filtered = filtered.filter(k => (Number(k.credit) || 0) <= num);
+        else if (creditFilterType === "=") filtered = filtered.filter(k => (Number(k.credit) || 0) === num);
+      }
+    }
+    // Lọc theo ngày tạo
+    if (createdAtRange.length === 2) {
+      const [start, end] = createdAtRange;
+      filtered = filtered.filter(k => {
+        const d = new Date(k.createdAt);
+        return d >= start.startOf('day').toDate() && d <= end.endOf('day').toDate();
+      });
+    }
+    // Lọc theo ngày hết hạn
+    if (expiredAtRange.length === 2) {
+      const [start, end] = expiredAtRange;
+      filtered = filtered.filter(k => {
+        if (!k.expiredAt) return false;
+        const d = new Date(k.expiredAt);
+        return d >= start.startOf('day').toDate() && d <= end.endOf('day').toDate();
+      });
+    }
+    setFilteredKeys(filtered);
+  };
+
+  // Hàm xuất CSV
+  const handleExportCSV = () => {
+    if (!keys.length) {
+      message.warning('Không có dữ liệu để xuất!');
+      return;
+    }
+    const header = ['Key', 'Trạng thái', 'Ngày tạo', 'Ngày hết hạn', 'Số máy tối đa', 'Số credit', 'Ghi chú'];
+    const rows = keys.map(k => [
+      k.key,
+      k.isActive ? 'Hoạt động' : 'Đã thu hồi',
+      new Date(k.createdAt).toLocaleString(),
+      k.expiredAt ? new Date(k.expiredAt).toLocaleDateString() : '',
+      k.maxActivations || 1,
+      k.credit ?? 0,
+      k.note || ''
+    ]);
+    const csv = [header, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, `danhsach_key_${new Date().toISOString().slice(0,10)}.csv`);
+  };
+
+  // Badge cảnh báo cho key sắp hết credit/hết hạn
+  const getKeyWarning = (record) => {
+    const credit = Number(record.credit) || 0;
+    let expired = false;
+    let soonExpire = false;
+    if (record.expiredAt) {
+      const now = new Date();
+      const exp = new Date(record.expiredAt);
+      expired = exp < now;
+      soonExpire = !expired && (exp - now < 7 * 24 * 60 * 60 * 1000);
+    }
+    if (credit < 5 && credit > 0) return <Badge color="orange" text="Sắp hết credit" />;
+    if (credit === 0) return <Badge color="red" text="Hết credit" />;
+    if (expired) return <Badge color="red" text="Đã hết hạn" />;
+    if (soonExpire) return <Badge color="gold" text="Sắp hết hạn" />;
+    return null;
   };
 
   const columns = [
@@ -152,7 +245,7 @@ function App() {
       title: "Key",
       dataIndex: "key",
       key: "key",
-      render: (text) => <b>{text}</b>,
+      render: (text, record) => <span><b>{text}</b> {getKeyWarning(record)}</span>,
     },
     {
       title: "Trạng thái",
@@ -276,6 +369,12 @@ function App() {
         <Button type="primary" onClick={handleCreateKey}>
           Tạo Key mới
         </Button>
+        <Button onClick={handleExportCSV}>
+          Xuất CSV
+        </Button>
+        <Button onClick={() => setShowLogDrawer(true)} style={{ marginLeft: 8 }}>
+          Xem log thao tác
+        </Button>
         <Modal
           title="Tạo Key mới"
           open={showCreateModal}
@@ -333,31 +432,73 @@ function App() {
           style={{ width: 300 }}
           allowClear
         />
-        <Select
-          value={statusFilter}
-          style={{ width: 150 }}
-          onChange={(value) => {
-            setStatusFilter(value);
-            handleSearch(search, value);
-          }}
-        >
-          <Select.Option value="all">Tất cả trạng thái</Select.Option>
-          <Select.Option value="active">Hoạt động</Select.Option>
-          <Select.Option value="revoked">Đã thu hồi</Select.Option>
-        </Select>
+        {/* Bộ lọc nâng cao */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+          <Select value={statusFilter} style={{ width: 150 }} onChange={(value) => { setStatusFilter(value); handleAdvancedFilter(); }}>
+            <Select.Option value="all">Tất cả trạng thái</Select.Option>
+            <Select.Option value="active">Hoạt động</Select.Option>
+            <Select.Option value="revoked">Đã thu hồi</Select.Option>
+          </Select>
+          <Select value={creditFilterType} style={{ width: 70 }} onChange={v => { setCreditFilterType(v); handleAdvancedFilter(); }}>
+            <Select.Option value=">=">&gt;=</Select.Option>
+            <Select.Option value="<=">&lt;=</Select.Option>
+            <Select.Option value="=">=</Select.Option>
+          </Select>
+          <Input
+            placeholder="Số credit"
+            style={{ width: 100 }}
+            value={creditFilter}
+            onChange={e => { setCreditFilter(e.target.value); handleAdvancedFilter(); }}
+            type="number"
+            min={0}
+          />
+          <DatePicker.RangePicker
+            style={{ width: 240 }}
+            placeholder={["Ngày tạo từ", "đến"]}
+            onChange={v => { setCreatedAtRange(v || []); handleAdvancedFilter(); }}
+            allowClear
+          />
+          <DatePicker.RangePicker
+            style={{ width: 240 }}
+            placeholder={["Ngày hết hạn từ", "đến"]}
+            onChange={v => { setExpiredAtRange(v || []); handleAdvancedFilter(); }}
+            allowClear
+          />
+        </div>
       </Space>
       {newKey && (
         <div style={{ color: "green", marginBottom: 10 }}>
           Key mới: <b>{newKey}</b>
         </div>
       )}
-      <Table
-        columns={columns}
-        dataSource={filteredKeys.map((k) => ({ ...k, key: k.key }))}
-        loading={loading}
-        rowKey="_id"
-        pagination={{ pageSize: 8 }}
-      />
+      <Spin spinning={loading || actionLoading} tip="Đang xử lý...">
+        <Table
+          columns={columns}
+          dataSource={filteredKeys.map((k) => ({ ...k, key: k.key }))}
+          loading={loading}
+          rowKey="_id"
+          pagination={{ pageSize: 8 }}
+        />
+      </Spin>
+      <Drawer
+        title="Lịch sử thao tác (Audit log)"
+        placement="right"
+        open={showLogDrawer}
+        onClose={() => setShowLogDrawer(false)}
+        width={400}
+      >
+        <List
+          dataSource={auditLog}
+          renderItem={item => (
+            <List.Item>
+              <List.Item.Meta
+                title={item.msg}
+                description={item.time}
+              />
+            </List.Item>
+          )}
+        />
+      </Drawer>
     </div>
   );
 }
