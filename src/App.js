@@ -45,9 +45,9 @@ function App() {
   const fetchKeys = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/keys`);
-      setKeys(res.data);
-      setFilteredKeys(res.data);
+      const response = await axios.get(`${API_BASE}/keys`);
+      setKeys(response.data);
+      setFilteredKeys(response.data);
     } catch (err) {
       message.error("Không lấy được danh sách key!");
     }
@@ -67,9 +67,9 @@ function App() {
   // Hàm submit form tạo key mới
   const handleCreateKeySubmit = async (values) => {
     try {
-      const res = await axios.post(`${API_BASE}/keys`, values);
-      setNewKey(res.data.key);
-      message.success(`Tạo key thành công: ${res.data.key}`);
+      const response = await axios.post(`${API_BASE}/keys`, values);
+      setNewKey(response.data.key);
+      message.success(`Tạo key thành công: ${response.data.key}`);
       setShowCreateModal(false);
       form.resetFields();
       fetchKeys();
@@ -83,7 +83,7 @@ function App() {
     // Hiện hộp thoại xác nhận đơn giản của trình duyệt
     if (window.confirm(`Bạn chắc chắn muốn thu hồi key này?\n${key}`)) {
       try {
-        const res = await axios.post(`${API_BASE}/keys/revoke`, { key });
+        await axios.post(`${API_BASE}/keys/revoke`, { key });
         message.success("Đã thu hồi key!");
         fetchKeys(); // Cập nhật lại danh sách key
       } catch (err) {
