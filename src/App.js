@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Table, Button, message, Tag, Space, Modal, Input, Select, Form, Card } from "antd";
+import { PlusOutlined } from '@ant-design/icons';
 
 const API_BASE = "https://key-manager-backend.onrender.com/api";
 
@@ -23,6 +24,9 @@ function App() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form] = Form.useForm();
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [selectedKey, setSelectedKey] = useState(null);
+  const [creditAmount, setCreditAmount] = useState(0);
 
   // Đăng nhập
   const handleLogin = () => {
@@ -111,6 +115,23 @@ function App() {
     setFilteredKeys(filtered);
   };
 
+  const handleOpenCreditModal = (record) => {
+    setSelectedKey(record.key);
+    setCreditAmount(0);
+    setShowCreditModal(true);
+  };
+
+  const handleUpdateCredit = async () => {
+    try {
+      await axios.post(`${API_BASE}/keys/update-credit`, { key: selectedKey, amount: creditAmount });
+      message.success('Cập nhật credit thành công!');
+      setShowCreditModal(false);
+      fetchKeys();
+    } catch (err) {
+      message.error('Cập nhật credit thất bại!');
+    }
+  };
+
   const columns = [
     {
       title: "Key",
@@ -160,9 +181,14 @@ function App() {
       key: "action",
       render: (_, record) =>
         record.isActive ? (
-          <Button danger onClick={() => handleRevokeKey(record.key)}>
-            Thu hồi
-          </Button>
+          <span>
+            <Button danger onClick={() => handleRevokeKey(record.key)} style={{ marginRight: 8 }}>
+              Thu hồi
+            </Button>
+            <Button icon={<PlusOutlined />} onClick={() => handleOpenCreditModal(record)}>
+              Cộng/Trừ credit
+            </Button>
+          </span>
         ) : (
           <span>---</span>
         ),
@@ -245,6 +271,24 @@ function App() {
               </Button>
             </Form.Item>
           </Form>
+        </Modal>
+        <Modal
+          title={`Cộng/Trừ credit cho key: ${selectedKey}`}
+          open={showCreditModal}
+          onCancel={() => setShowCreditModal(false)}
+          onOk={handleUpdateCredit}
+          okText="Cập nhật"
+          cancelText="Hủy"
+        >
+          <Input
+            type="number"
+            value={creditAmount}
+            onChange={e => setCreditAmount(Number(e.target.value))}
+            placeholder="Nhập số credit muốn cộng (dương) hoặc trừ (âm)"
+          />
+          <div style={{ marginTop: 8, color: '#888', fontSize: 13 }}>
+            VD: Nhập 5 để cộng 5 credit, nhập -2 để trừ 2 credit
+          </div>
         </Modal>
         <Input.Search
           placeholder="Tìm kiếm key hoặc trạng thái..."
