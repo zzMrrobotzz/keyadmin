@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Table, Button, message, Tag, Space, Modal, Input, Select, Form, Card } from "antd";
 import { PlusOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
 const API_BASE = "https://key-manager-backend.onrender.com/api";
 
@@ -27,6 +28,15 @@ function App() {
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
   const [creditAmount, setCreditAmount] = useState(0);
+
+  // Thống kê tổng quan
+  const now = new Date();
+  const totalKeys = keys.length;
+  const activeKeys = keys.filter(k => k.isActive).length;
+  const revokedKeys = keys.filter(k => !k.isActive).length;
+  const expiredKeys = keys.filter(k => k.expiredAt && new Date(k.expiredAt) < now).length;
+  const totalCredit = keys.reduce((sum, k) => sum + (Number(k.credit) || 0), 0);
+  const totalActiveCredit = keys.filter(k => k.isActive).reduce((sum, k) => sum + (Number(k.credit) || 0), 0);
 
   // Đăng nhập
   const handleLogin = () => {
@@ -71,7 +81,8 @@ function App() {
   // Hàm submit form tạo key mới
   const handleCreateKeySubmit = async (values) => {
     try {
-      const response = await axios.post(`${API_BASE}/keys`, values);
+      const payload = { ...values, credit: Number(values.credit) };
+      const response = await axios.post(`${API_BASE}/keys`, payload);
       setNewKey(response.data.key);
       message.success(`Tạo key thành công: ${response.data.key}`);
       setShowCreateModal(false);
@@ -122,8 +133,12 @@ function App() {
   };
 
   const handleUpdateCredit = async () => {
+    if (isNaN(creditAmount) || creditAmount === 0) {
+      message.error('Vui lòng nhập số credit khác 0!');
+      return;
+    }
     try {
-      await axios.post(`${API_BASE}/keys/update-credit`, { key: selectedKey, amount: creditAmount });
+      await axios.post(`${API_BASE}/keys/update-credit`, { key: selectedKey, amount: Number(creditAmount) });
       message.success('Cập nhật credit thành công!');
       setShowCreditModal(false);
       fetchKeys();
@@ -235,6 +250,27 @@ function App() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ textAlign: "center" }}>Quản lý Key Bản Quyền</h1>
         <Button onClick={handleLogout}>Đăng xuất</Button>
+      </div>
+      {/* Bảng thống kê tổng quan */}
+      <div style={{ display: 'flex', gap: 16, margin: '24px 0' }}>
+        <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: 16, minWidth: 140 }}>
+          <b>Tổng số key</b><br />{totalKeys}
+        </div>
+        <div style={{ background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 8, padding: 16, minWidth: 140 }}>
+          <b>Key hoạt động</b><br />{activeKeys}
+        </div>
+        <div style={{ background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 8, padding: 16, minWidth: 140 }}>
+          <b>Key thu hồi</b><br />{revokedKeys}
+        </div>
+        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: 16, minWidth: 140 }}>
+          <b>Key hết hạn</b><br />{expiredKeys}
+        </div>
+        <div style={{ background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 8, padding: 16, minWidth: 140 }}>
+          <b>Tổng credit</b><br />{totalCredit}
+        </div>
+        <div style={{ background: '#f9f0ff', border: '1px solid #d3adf7', borderRadius: 8, padding: 16, minWidth: 140 }}>
+          <b>Credit key hoạt động</b><br />{totalActiveCredit}
+        </div>
       </div>
       <Space style={{ marginBottom: 16 }}>
         <Button type="primary" onClick={handleCreateKey}>
