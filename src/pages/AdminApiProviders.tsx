@@ -4,8 +4,6 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, EyeInvisibleOu
 import { ManagedApiProvider, ApiProviderType } from '../types';
 import { getApiProviders, saveApiProviders } from '../services/keyService';
 
-const { Option } = Select;
-
 const AdminApiProviders: React.FC = () => {
   const [providers, setProviders] = useState<ManagedApiProvider[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -264,13 +262,16 @@ const AdminApiProviders: React.FC = () => {
             label="Provider"
             rules={[{ required: true, message: 'Vui lòng chọn provider!' }]}
           >
-            <Select placeholder="Chọn provider">
-              <Option value="Gemini">Google Gemini</Option>
-              <Option value="OpenAI">OpenAI</Option>
-              <Option value="DeepSeek">DeepSeek</Option>
-              <Option value="Stability AI">Stability AI</Option>
-              <Option value="ElevenLabs">ElevenLabs</Option>
-            </Select>
+            <Select 
+              placeholder="Chọn provider"
+              options={[
+                { value: 'Gemini', label: 'Google Gemini' },
+                { value: 'OpenAI', label: 'OpenAI' },
+                { value: 'DeepSeek', label: 'DeepSeek' },
+                { value: 'Stability AI', label: 'Stability AI' },
+                { value: 'ElevenLabs', label: 'ElevenLabs' }
+              ]}
+            />
           </Form.Item>
 
           <Form.Item

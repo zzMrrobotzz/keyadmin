@@ -4,8 +4,6 @@ import { AdminKey } from '../types';
 import { Button, Modal, Input, message, Table, Tag, Space, Select, DatePicker, Form, InputNumber, Switch } from 'antd';
 import { saveAs } from 'file-saver';
 import dayjs, { Dayjs } from 'dayjs';
-
-const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const AdminKeyManagement: React.FC = () => {
@@ -156,16 +154,26 @@ const AdminKeyManagement: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800">Quản Lý Key</h1>
             <Space className="flex-wrap">
                 <Input.Search placeholder="Tìm kiếm key hoặc note..." onSearch={setSearchTerm} style={{ width: 240 }} allowClear />
-                <Select defaultValue="all" onChange={setStatusFilter} style={{ width: 120 }}>
-                    <Option value="all">Mọi trạng thái</Option>
-                    <Option value="active">Active</Option>
-                    <Option value="inactive">Inactive</Option>
-                </Select>
-                 <Select defaultValue="all" onChange={setTrialFilter} style={{ width: 120 }}>
-                    <Option value="all">Mọi loại key</Option>
-                    <Option value="trial">Trial</Option>
-                    <Option value="normal">Normal</Option>
-                </Select>
+                <Select 
+                    defaultValue="all" 
+                    onChange={setStatusFilter} 
+                    style={{ width: 120 }}
+                    options={[
+                        { value: 'all', label: 'Mọi trạng thái' },
+                        { value: 'active', label: 'Active' },
+                        { value: 'inactive', label: 'Inactive' }
+                    ]}
+                />
+                 <Select 
+                    defaultValue="all" 
+                    onChange={setTrialFilter} 
+                    style={{ width: 120 }}
+                    options={[
+                        { value: 'all', label: 'Mọi loại key' },
+                        { value: 'trial', label: 'Trial' },
+                        { value: 'normal', label: 'Normal' }
+                    ]}
+                />
                 <Button type="primary" onClick={handleCreate}>Tạo Key Mới</Button>
                 <Button onClick={handleExportCSV}>Xuất CSV</Button>
             </Space>
