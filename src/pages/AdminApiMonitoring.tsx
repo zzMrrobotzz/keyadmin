@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, message } from 'antd';
-import { Card } from 'antd';
+import { Table, Tag, message, Card } from 'antd';
 import { ApiStatus } from '../types';
 
 // Mock API status data (sẽ thay bằng API thật sau)

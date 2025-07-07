@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Tag, message, Switch, Tooltip } from 'antd';
-import { Card } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, Tag, message, Switch, Tooltip, Card } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, EyeInvisibleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { ManagedApiProvider, ApiProviderType } from '../types';
 import { getApiProviders, saveApiProviders } from '../services/keyService';

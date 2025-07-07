@@ -3,8 +3,7 @@ import StatCard from '../components/StatCard';
 import { fetchKeys } from '../services/keyService';
 import { getApiProviders, getAuditLog } from '../services/keyService';
 import { DollarSign, KeyRound, Users, Activity, Cpu, Cloud, Shield, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
-import { message, Empty, Row, Col, Progress, List } from 'antd';
-import { Card } from 'antd';
+import { message, Empty, Row, Col, Progress, List, Card as AntCard } from 'antd';
 import { DashboardData, AdminKey, ManagedApiProvider } from '../types';
 
 const AdminDashboard: React.FC = () => {
@@ -235,7 +234,7 @@ const AdminDashboard: React.FC = () => {
             {/* Recent Activity & Provider Status */}
             <Row gutter={16}>
                 <Col span={12}>
-                    <Card title="🛡️ Hoạt Động Gần Đây" size="small">
+                    <AntCard title="🛡️ Hoạt Động Gần Đây" size="small">
                         {auditLogs.length > 0 ? (
                             <List
                                 size="small"
@@ -252,10 +251,10 @@ const AdminDashboard: React.FC = () => {
                         ) : (
                             <Empty description="Chưa có hoạt động nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         )}
-                    </Card>
+                    </AntCard>
                 </Col>
                 <Col span={12}>
-                    <Card title="🧠 Trạng Thái API Providers" size="small">
+                    <AntCard title="🧠 Trạng Thái API Providers" size="small">
                         {apiProviders.length > 0 ? (
                             <div className="space-y-3">
                                 {apiProviders.slice(0, 4).map(provider => (
@@ -282,7 +281,7 @@ const AdminDashboard: React.FC = () => {
                         ) : (
                             <Empty description="Chưa có API providers nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                         )}
-                    </Card>
+                    </AntCard>
                 </Col>
             </Row>
         </div>

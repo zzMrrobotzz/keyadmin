@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, Modal, Form, Input, InputNumber, message, Statistic, Row, Col } from 'antd';
-import { Card } from 'antd';
+import { Table, Tag, Button, Modal, Form, Input, InputNumber, message, Statistic, Row, Col, Card } from 'antd';
 import { DollarCircleOutlined, CreditCardOutlined, TrophyOutlined, LineChartOutlined } from '@ant-design/icons';
 
 interface PricingPlan {

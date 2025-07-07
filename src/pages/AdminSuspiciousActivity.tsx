@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Empty, List, Typography, Tabs } from 'antd';
-import { Card } from 'antd';
+import { Empty, List, Typography, Tabs, Card } from 'antd';
 import { getAuditLog } from '../services/keyService';
 
 const { TabPane } = Tabs;
