@@ -1,12 +1,14 @@
 [build]
   base = "."
-  command = "npm ci && npm run build"
+  command = "npm ci --force && npm run build"
   publish = "build"
 
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
   CI = "false"
+  GENERATE_SOURCEMAP = "false"
+  DISABLE_ESLINT_PLUGIN = "true"
 
 [[redirects]]
   from = "/*"
