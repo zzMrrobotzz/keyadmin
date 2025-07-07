@@ -51,12 +51,13 @@ export interface ManagedApiKey {
 
 // Types for Billing/Credit System
 export interface CreditPackage {
-  id: string;
+  _id: string;
   name: string;
-  price: number; // in VND
-  credits: number; // number of story credits
+  price: number;
+  credits: number;
   bonus?: string;
   isPopular?: boolean;
+  isActive?: boolean;
 }
 
 export interface Transaction {

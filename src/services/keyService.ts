@@ -83,11 +83,85 @@ export const updateCredit = async (key: string, amount: number) => {
 };
 
 /**
+ * Cập nhật các thông tin chi tiết của một key (note, expiredAt, credit...).
+ */
+export const updateKeyDetails = async (keyId: string, payload: { note?: string; expiredAt?: string | null; credit?: number; maxActivations?: number }) => {
+  try {
+    const response = await apiClient.put(`/keys/${keyId}/details`, payload);
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+/**
+ * Cập nhật trạng thái (active/inactive) của một key.
+ */
+export const updateKeyStatus = async (keyId: string, isActive: boolean) => {
+  try {
+    const response = await apiClient.put(`/keys/${keyId}/status`, { isActive });
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+/**
  * Lấy danh sách các nhà cung cấp API từ backend.
  */
 export const fetchApiProviders = async () => {
     try {
         const response = await apiClient.get('/providers');
+        return response.data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+// --- Credit Package Management ---
+
+/**
+ * Lấy danh sách tất cả các gói cước.
+ */
+export const fetchPackages = async () => {
+    try {
+        const response = await apiClient.get('/packages');
+        return response.data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+/**
+ * Cập nhật một gói cước.
+ */
+export const updatePackage = async (packageId: string, payload: any) => {
+    try {
+        const response = await apiClient.put(`/packages/${packageId}`, payload);
+        return response.data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+/**
+ * Tạo một gói cước mới.
+ */
+export const createPackage = async (payload: any) => {
+    try {
+        const response = await apiClient.post('/packages', payload);
+        return response.data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+/**
+ * Xóa một gói cước.
+ */
+export const deletePackage = async (packageId: string) => {
+    try {
+        const response = await apiClient.delete(`/packages/${packageId}`);
         return response.data;
     } catch (error) {
         handleError(error);

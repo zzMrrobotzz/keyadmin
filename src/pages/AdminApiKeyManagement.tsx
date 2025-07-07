@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchKeys, createKey, revokeKey, updateCredit } from '../services/keyService';
+import { fetchKeys, createKey, updateCredit, updateKeyStatus, updateKeyDetails } from '../services/keyService'; // Thêm service mới
 import { AdminKey } from '../types';
-import { Button, Modal, Input, message, Table, Tag, Space, Select, DatePicker, Form, InputNumber, Switch } from 'antd';
+import { Button, Modal, Input, message, Table, Tag, Space, Select, DatePicker, Form, InputNumber, Switch, Tooltip } from 'antd';
 import { saveAs } from 'file-saver';
-import dayjs, { Dayjs } from 'dayjs';
-const { RangePicker } = DatePicker;
+import dayjs from 'dayjs';
+import { EditOutlined, PlusCircleOutlined, ExportOutlined, ReloadOutlined } from '@ant-design/icons';
 
 const AdminKeyManagement: React.FC = () => {
     const [keys, setKeys] = useState<AdminKey[]>([]);
@@ -13,23 +13,15 @@ const AdminKeyManagement: React.FC = () => {
     const [editingKey, setEditingKey] = useState<AdminKey | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [trialFilter, setTrialFilter] = useState('all');
     const [form] = Form.useForm();
 
     const loadKeys = async () => {
         setLoading(true);
         try {
             const data = await fetchKeys();
-            // Map backend data to frontend format
-            const mappedData = data.map((key: any) => ({
-                ...key,
-                id: key._id, // Map _id to id for frontend
-                isTrial: key.isTrial || false, // Default false if not exists
-                maxActivations: key.maxActivations || 1 // Default 1 if not exists
-            }));
-            setKeys(mappedData);
-        } catch (error) {
-            message.error('Không thể tải danh sách key!');
+            setKeys(data || []);
+        } catch (error: any) {
+            message.error(error.message || 'Không thể tải danh sách key!');
         } finally {
             setLoading(false);
         }
@@ -43,15 +35,14 @@ const AdminKeyManagement: React.FC = () => {
         return keys.filter(key => {
             const matchSearch = key.key.toLowerCase().includes(searchTerm.toLowerCase()) || (key.note && key.note.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? key.isActive : !key.isActive);
-            const matchTrial = trialFilter === 'all' || (trialFilter === 'trial' ? key.isTrial : !key.isTrial);
-            return matchSearch && matchStatus && matchTrial;
+            return matchSearch && matchStatus;
         });
-    }, [keys, searchTerm, statusFilter, trialFilter]);
+    }, [keys, searchTerm, statusFilter]);
 
     const handleCreate = () => {
         setEditingKey(null);
         form.resetFields();
-        form.setFieldsValue({ credit: 0, isActive: true, isTrial: false, maxActivations: 1 });
+        form.setFieldsValue({ credit: 0, maxActivations: 1 });
         setIsModalVisible(true);
     };
 
@@ -68,82 +59,95 @@ const AdminKeyManagement: React.FC = () => {
         let amount = prompt(`Nhập số credit muốn CỘNG/TRỪ cho key:\n${record.key}\n(Nhập số âm để trừ)`, "0");
         if (amount === null) return;
         const creditAmount = parseInt(amount, 10);
-        if (isNaN(creditAmount) || creditAmount === 0) {
-            message.warning('Vui lòng nhập một số hợp lệ và khác 0.');
+        if (isNaN(creditAmount)) {
+            message.warning('Vui lòng nhập một số hợp lệ.');
             return;
         }
-
         try {
-            await updateCredit(record.key, creditAmount); // Dùng key thay vì id
+            await updateCredit(record.key, creditAmount);
             message.success(`Đã cập nhật credit cho key!`);
             loadKeys();
-        } catch (error) {
-            message.error('Cập nhật credit thất bại!');
+        } catch (error: any) {
+            message.error(error.message || 'Cập nhật credit thất bại!');
         }
     };
 
+    const handleStatusChange = async (keyId: string, checked: boolean) => {
+        try {
+            await updateKeyStatus(keyId, checked);
+            message.success('Cập nhật tr��ng thái thành công!');
+            // Cập nhật lại state để giao diện phản hồi ngay lập tức
+            setKeys(prevKeys => prevKeys.map(k => k._id === keyId ? { ...k, isActive: checked } : k));
+        } catch (error: any) {
+            message.error(error.message || 'Cập nhật trạng thái thất bại!');
+        }
+    };
 
     const handleFormSubmit = async () => {
         try {
             const values = await form.validateFields();
-            console.log('Form values:', values); // Debug log
             
-            // Only send fields that backend expects
             const payload = {
-                key: values.key,
-                credit: Number(values.credit) || 0,
                 note: values.note || '',
                 expiredAt: values.expiredAt ? values.expiredAt.toISOString() : null,
-                isActive: Boolean(values.isActive),
-                maxActivations: Number(values.maxActivations) || 1
+                credit: Number(values.credit),
+                maxActivations: Number(values.maxActivations)
             };
 
-            console.log('Payload to send:', payload); // Debug log
-
             if (editingKey) {
-                // Update logic (chưa có API, tạm thời ẩn)
-                // await updateKey(editingKey.id, payload);
-                message.info("Tính năng cập nhật chưa được hỗ trợ từ API.");
+                await updateKeyDetails(editingKey._id, payload);
+                message.success('Cập nhật key thành công!');
             } else {
-                await createKey(payload);
+                await createKey({ ...payload, key: values.key });
                 message.success('Tạo key thành công!');
-                setIsModalVisible(false);
-                loadKeys();
             }
+            setIsModalVisible(false);
+            loadKeys();
+
         } catch (error: any) {
-            console.error('Error details:', error); // Debug log
-            if (error?.name === 'ValidationError') {
-                message.error('Vui lòng kiểm tra lại thông tin đã nhập!');
-            } else {
-                message.error(`Thao tác thất bại: ${error?.message || error}`);
-            }
+            message.error(`Thao tác thất bại: ${error?.message || 'Lỗi không xác định'}`);
         }
     };
 
     const handleExportCSV = () => {
-        const header = ['Key', 'Credit', 'Note', 'Status', 'Trial', 'Expired At', 'Created At'];
-        const rows = filteredKeys.map(k => [k.key, k.credit, k.note, k.isActive ? 'Active' : 'Inactive', k.isTrial ? 'Yes' : 'No', k.expiredAt, k.createdAt]);
+        const header = ['Key', 'Credit', 'Note', 'Status', 'Expired At', 'Created At'];
+        const rows = filteredKeys.map(k => [k.key, k.credit, k.note, k.isActive ? 'Active' : 'Inactive', k.expiredAt, k.createdAt]);
         const csvContent = [header, ...rows].map(row => row.map(String).join(',')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         saveAs(blob, 'keys_export.csv');
     };
 
     const columns = [
-        { title: 'Key', dataIndex: 'key', key: 'key', render: (text:string, record: AdminKey) => <a onClick={() => handleEdit(record)}>{text}</a> },
+        { title: 'Key', dataIndex: 'key', key: 'key', fixed: 'left', width: 150, render: (text:string) => <code>{text}</code> },
         { title: 'Credit', dataIndex: 'credit', key: 'credit', sorter: (a: AdminKey, b: AdminKey) => a.credit - b.credit },
-        { title: 'Max Activations', dataIndex: 'maxActivations', key: 'maxActivations' },
         { title: 'Note', dataIndex: 'note', key: 'note' },
-        { title: 'Status', dataIndex: 'isActive', key: 'isActive', render: (isActive: boolean) => <Tag color={isActive ? 'green' : 'red'}>{isActive ? 'Active' : 'Inactive'}</Tag> },
-        { title: 'Trial', dataIndex: 'isTrial', key: 'isTrial', render: (isTrial: boolean) => (isTrial ? <Tag color="blue">Trial</Tag> : null) },
-        { title: 'Expired At', dataIndex: 'expiredAt', key: 'expiredAt', render: (date: string) => date ? dayjs(date).format('DD/MM/YYYY') : '-' },
-        { title: 'Created At', dataIndex: 'createdAt', key: 'createdAt', render: (date: string) => dayjs(date).format('DD/MM/YYYY') },
-        {
-            title: 'Action',
+        { 
+            title: 'Trạng thái', 
+            dataIndex: 'isActive', 
+            key: 'isActive',
+            render: (isActive: boolean, record: AdminKey) => (
+                <Switch
+                    checked={isActive}
+                    onChange={(checked) => handleStatusChange(record._id, checked)}
+                    checkedChildren="Active"
+                    unCheckedChildren="Inactive"
+                />
+            )
+        },
+        { title: 'Ngày hết hạn', dataIndex: 'expiredAt', key: 'expiredAt', render: (date: string) => date ? dayjs(date).format('DD/MM/YYYY') : 'Vĩnh viễn' },
+        { title: 'Ngày tạo', dataIndex: 'createdAt', key: 'createdAt', render: (date: string) => dayjs(date).format('DD/MM/YYYY') },
+        {            title: 'Hành động',
             key: 'action',
+            fixed: 'right',
+            width: 120,
             render: (_: any, record: AdminKey) => (
                 <Space>
-                    <Button type="primary" onClick={() => handleCreditUpdate(record)}>+/- Credit</Button>
-                    <Button onClick={() => handleEdit(record)}>Sửa</Button>
+                    <Tooltip title="Sửa ghi chú, credit, ngày hết hạn">
+                        <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                    </Tooltip>
+                    <Tooltip title="Cộng/Trừ Credit">
+                        <Button icon={<PlusCircleOutlined />} onClick={() => handleCreditUpdate(record)} />
+                    </Tooltip>
                 </Space>
             ),
         },
@@ -157,32 +161,23 @@ const AdminKeyManagement: React.FC = () => {
                 <Select 
                     defaultValue="all" 
                     onChange={setStatusFilter} 
-                    style={{ width: 120 }}
+                    style={{ width: 140 }}
                     options={[
                         { value: 'all', label: 'Mọi trạng thái' },
                         { value: 'active', label: 'Active' },
                         { value: 'inactive', label: 'Inactive' }
                     ]}
                 />
-                 <Select 
-                    defaultValue="all" 
-                    onChange={setTrialFilter} 
-                    style={{ width: 120 }}
-                    options={[
-                        { value: 'all', label: 'Mọi loại key' },
-                        { value: 'trial', label: 'Trial' },
-                        { value: 'normal', label: 'Normal' }
-                    ]}
-                />
-                <Button type="primary" onClick={handleCreate}>Tạo Key Mới</Button>
-                <Button onClick={handleExportCSV}>Xuất CSV</Button>
+                <Button type="primary" icon={<PlusCircleOutlined />} onClick={handleCreate}>Tạo Key Mới</Button>
+                <Button icon={<ExportOutlined />} onClick={handleExportCSV}>Xuất CSV</Button>
+                <Button icon={<ReloadOutlined />} onClick={loadKeys} loading={loading} />
             </Space>
             <Table
                 columns={columns}
                 dataSource={filteredKeys}
                 loading={loading}
-                rowKey="id"
-                scroll={{ x: 'max-content' }}
+                rowKey="_id"
+                scroll={{ x: 1200 }}
             />
             <Modal
                 title={editingKey ? 'Sửa Key' : 'Tạo Key Mới'}
@@ -191,8 +186,8 @@ const AdminKeyManagement: React.FC = () => {
                 onCancel={() => setIsModalVisible(false)}
                 destroyOnClose
             >
-                <Form form={form} layout="vertical">
-                    <Form.Item name="key" label="Key" rules={[{ required: true, message: 'Vui lòng nhập key!' }]}>
+                <Form form={form} layout="vertical" initialValues={{ credit: 0, maxActivations: 1 }}>
+                    <Form.Item name="key" label="Key" rules={[{ required: true, message: 'Vui lòng nhập key!' }]} hidden={!!editingKey}>
                         <Input disabled={!!editingKey} />
                     </Form.Item>
                     <Form.Item name="credit" label="Credit" rules={[{ required: true, message: 'Vui lòng nhập số credit!' }]}>
@@ -205,13 +200,7 @@ const AdminKeyManagement: React.FC = () => {
                         <Input.TextArea />
                     </Form.Item>
                     <Form.Item name="expiredAt" label="Ngày hết hạn">
-                        <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">
-                        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-                    </Form.Item>
-                     <Form.Item name="isTrial" label="Key dùng thử" valuePropName="checked">
-                        <Switch checkedChildren="Yes" unCheckedChildren="No" />
+                        <DatePicker placeholder="Bỏ trống để không hết hạn" format="DD/MM/YYYY" style={{ width: '100%' }} />
                     </Form.Item>
                 </Form>
             </Modal>
@@ -219,4 +208,4 @@ const AdminKeyManagement: React.FC = () => {
     );
 };
 
-export default AdminKeyManagement; 
+export default AdminKeyManagement;
