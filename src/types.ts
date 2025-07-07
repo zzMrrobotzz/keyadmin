@@ -98,14 +98,11 @@ export interface AdminKey {
 }
 
 export interface ManagedApiProvider {
-  id: string;
-  provider: ApiProviderType;
-  apiKey: string;
-  nickname: string;
-  status: 'Active' | 'Inactive' | 'Error';
-  lastChecked: string;
-  dailyUsage: number;
-  monthlyUsage: number;
+  _id: string; // Backend dùng _id
+  id?: string; // Frontend alias
+  name: string; // Đổi từ provider
+  status: 'Operational' | 'Degraded' | 'Error' | 'Unknown'; // Đồng bộ với backend
   costToday: number;
-  isDefault: boolean; // Đánh dấu provider mặc định
+  totalRequests: number;
+  lastChecked: string;
 } 
