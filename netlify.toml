@@ -1,6 +1,6 @@
 [build]
   base = "."
-  command = "npm install && npm run build"
+  command = "rm -rf node_modules && rm -f package-lock.json && npm install && npm run build"
   publish = "build"
 
 [build.environment]
