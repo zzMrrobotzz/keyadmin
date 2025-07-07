@@ -1,72 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
-import { fetchKeys } from '../services/keyService';
-import { getApiProviders, getAuditLog } from '../services/keyService';
+import { fetchKeys, fetchDashboardStats, fetchAuditLogs, fetchApiProviders } from '../services/keyService';
 import { DollarSign, KeyRound, Users, Activity, Cpu, Cloud, Shield, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
-import { message, Empty, Row, Col, Progress, List, Card as AntCard } from 'antd';
-import { DashboardData, AdminKey, ManagedApiProvider } from '../types';
+import { message, Empty, Row, Col, List, Card as AntCard, Spin } from 'antd';
+import { AdminKey, ManagedApiProvider } from '../types';
+
+// Helper để định dạng số và tiền tệ
+const formatNumber = (value: number) => (value || 0).toLocaleString('vi-VN');
+const formatCurrency = (value: number) => `${(value || 0).toLocaleString('vi-VN')} VNĐ`;
 
 const AdminDashboard: React.FC = () => {
-    const [data, setData] = useState<DashboardData>({
-        totalKeys: 0,
-        activeKeys: 0,
-        expiredKeys: 0,
-        totalCredit: 0,
-        totalActiveCredit: 0,
-    });
+    // State cho từng phần dữ liệu
+    const [keyStats, setKeyStats] = useState({ total: 0, active: 0, expired: 0 });
+    const [billingStats, setBillingStats] = useState({ totalRevenue: 0, monthlyTransactions: 0 });
+    const [apiUsageStats, setApiUsageStats] = useState({ totalRequests: 0, costToday: 0 });
     const [apiProviders, setApiProviders] = useState<ManagedApiProvider[]>([]);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Mock billing data (thay bằng API thật nếu có)
-    const billingStats = {
-        totalRevenue: 398000,
-        pendingRevenue: 99000,
-        monthlyTransactions: 12,
-        successRate: 91.7
-    };
-
-    // Mock API usage data (thay bằng API thật nếu có)  
-    const apiUsageStats = {
-        totalRequests: 8540,
-        todayRequests: 1250,
-        averageCost: 22.5,
-        errorRate: 2.3
-    };
-
     useEffect(() => {
         const getDashboardData = async () => {
             try {
-                // Load Keys data
-                const keys: AdminKey[] = await fetchKeys();
-                const mappedKeys = keys.map((key: any) => ({
-                    ...key,
-                    id: key._id,
-                    isTrial: key.isTrial || false,
-                    maxActivations: key.maxActivations || 1
-                }));
+                setLoading(true);
+                
+                // Gọi song song các API để tải nhanh hơn
+                const [keysData, statsData, providersData, logsData] = await Promise.all([
+                    fetchKeys(),
+                    fetchDashboardStats(),
+                    fetchApiProviders(),
+                    fetchAuditLogs()
+                ]);
 
-                if (mappedKeys && mappedKeys.length > 0) {
+                // Xử lý và cập nhật state cho Key
+                if (keysData && keysData.length > 0) {
                     const now = new Date();
-                    const totalKeys = mappedKeys.length;
-                    const activeKeys = mappedKeys.filter(k => k.isActive).length;
-                    const expiredKeys = mappedKeys.filter(k => k.expiredAt && new Date(k.expiredAt) < now).length;
-                    const totalCredit = mappedKeys.reduce((sum, k) => sum + (Number(k.credit) || 0), 0);
-                    const totalActiveCredit = mappedKeys.filter(k => k.isActive).reduce((sum, k) => sum + (Number(k.credit) || 0), 0);
-                    
-                    setData({ totalKeys, activeKeys, expiredKeys, totalCredit, totalActiveCredit });
+                    const activeKeys = keysData.filter((k: AdminKey) => k.isActive).length;
+                    const expiredKeys = keysData.filter((k: AdminKey) => k.expiredAt && new Date(k.expiredAt) < now).length;
+                    setKeyStats({ total: keysData.length, active: activeKeys, expired: expiredKeys });
                 }
 
-                // Load API Providers data
-                const providers = getApiProviders();
-                setApiProviders(providers);
+                // Xử lý và cập nhật state cho Stats
+                if (statsData) {
+                    setBillingStats(statsData.billingStats);
+                    setApiUsageStats(statsData.apiUsageStats);
+                }
 
-                // Load Audit Logs
-                const logs = getAuditLog();
-                setAuditLogs(logs.slice(0, 5)); // Chỉ lấy 5 log gần nhất
+                // Cập nhật state cho Providers và Logs
+                setApiProviders(providersData || []);
+                setAuditLogs(logsData || []);
 
-            } catch (error) {
-                message.error('Không thể tải dữ liệu dashboard!');
+            } catch (error: any) {
+                message.error(error.message || 'Không thể tải dữ liệu dashboard!');
             } finally {
                 setLoading(false);
             }
@@ -74,15 +58,15 @@ const AdminDashboard: React.FC = () => {
         getDashboardData();
     }, []);
 
-    const formatNumber = (value: number) => value.toLocaleString('vi-VN');
-    const formatCurrency = (value: number) => `${value.toLocaleString('vi-VN')} VNĐ`;
-
     if (loading) {
-        return <div className="text-center py-8">Đang tải dữ liệu...</div>;
+        return (
+            <div className="flex justify-center items-center h-64">
+                <Spin size="large" tip="Đang tải dữ liệu hệ thống..." />
+            </div>
+        );
     }
-
-    const activeProviders = apiProviders.filter(p => p.status === 'Active').length;
-    const totalDailyCost = apiProviders.reduce((sum, p) => sum + p.costToday, 0);
+    
+    const activeProvidersCount = apiProviders.filter(p => p.status === 'Operational').length;
 
     return (
         <div className="space-y-8 animate-fadeIn">
@@ -92,35 +76,10 @@ const AdminDashboard: React.FC = () => {
             <div>
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">📊 Thống Kê Key</h2>
                 <Row gutter={16}>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tổng Số Key" 
-                            value={formatNumber(data.totalKeys)} 
-                            Icon={KeyRound}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Key Đang Hoạt Động" 
-                            value={formatNumber(data.activeKeys)} 
-                            Icon={Users}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Key Đã Hết Hạn" 
-                            value={formatNumber(data.expiredKeys)} 
-                            Icon={Activity}
-                            changeType="negative"
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tổng Credit Hệ Thống" 
-                            value={formatNumber(data.totalCredit)} 
-                            Icon={DollarSign}
-                        />
-                    </Col>
+                    <Col span={6}><StatCard title="Tổng Số Key" value={formatNumber(keyStats.total)} Icon={KeyRound}/></Col>
+                    <Col span={6}><StatCard title="Key Đang Hoạt Động" value={formatNumber(keyStats.active)} Icon={Users}/></Col>
+                    <Col span={6}><StatCard title="Key Đã Hết Hạn" value={formatNumber(keyStats.expired)} Icon={Activity} changeType="negative"/></Col>
+                    {/* Có thể thêm tổng credit nếu cần */}
                 </Row>
             </div>
 
@@ -128,106 +87,20 @@ const AdminDashboard: React.FC = () => {
             <div>
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">💰 Thống Kê Doanh Thu</h2>
                 <Row gutter={16}>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tổng Doanh Thu" 
-                            value={formatCurrency(billingStats.totalRevenue)} 
-                            Icon={CreditCard}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Doanh Thu Chờ Xử Lý" 
-                            value={formatCurrency(billingStats.pendingRevenue)} 
-                            Icon={TrendingUp}
-                            changeType="negative"
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Giao Dịch Tháng Này" 
-                            value={formatNumber(billingStats.monthlyTransactions)} 
-                            Icon={Activity}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tỷ Lệ Thành Công" 
-                            value={`${billingStats.successRate}%`} 
-                            Icon={Shield}
-                        />
-                    </Col>
+                    <Col span={6}><StatCard title="Tổng Doanh Thu" value={formatCurrency(billingStats.totalRevenue)} Icon={CreditCard}/></Col>
+                    <Col span={6}><StatCard title="Giao Dịch Tháng Này" value={formatNumber(billingStats.monthlyTransactions)} Icon={Activity}/></Col>
+                    {/* Các thống kê khác có thể thêm sau */}
                 </Row>
             </div>
 
-            {/* API Providers Statistics */}
+            {/* API Providers & Usage Statistics */}
             <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">🧠 Thống Kê API Providers</h2>
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">🧠 Thống Kê Sử Dụng API</h2>
                 <Row gutter={16}>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tổng Số Providers" 
-                            value={formatNumber(apiProviders.length)} 
-                            Icon={Cpu}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Providers Hoạt Động" 
-                            value={formatNumber(activeProviders)} 
-                            Icon={Activity}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Chi Phí API Hôm Nay" 
-                            value={`$${totalDailyCost.toFixed(2)}`} 
-                            Icon={DollarSign}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Requests Hôm Nay" 
-                            value={formatNumber(apiUsageStats.todayRequests)} 
-                            Icon={Cloud}
-                        />
-                    </Col>
-                </Row>
-            </div>
-
-            {/* API Usage Statistics */}
-            <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">☁️ Thống Kê Sử Dụng API</h2>
-                <Row gutter={16}>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tổng Requests" 
-                            value={formatNumber(apiUsageStats.totalRequests)} 
-                            Icon={Cloud}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Chi Phí Trung Bình" 
-                            value={`$${apiUsageStats.averageCost}`} 
-                            Icon={DollarSign}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Tỷ Lệ Lỗi" 
-                            value={`${apiUsageStats.errorRate}%`} 
-                            Icon={AlertTriangle}
-                            changeType={apiUsageStats.errorRate > 5 ? "negative" : undefined}
-                        />
-                    </Col>
-                    <Col span={6}>
-                        <StatCard 
-                            title="Uptime" 
-                            value="99.2%" 
-                            Icon={Activity}
-                        />
-                    </Col>
+                    <Col span={6}><StatCard title="Tổng Số Providers" value={formatNumber(apiProviders.length)} Icon={Cpu}/></Col>
+                    <Col span={6}><StatCard title="Providers Hoạt Động" value={formatNumber(activeProvidersCount)} Icon={Shield}/></Col>
+                    <Col span={6}><StatCard title="Tổng Requests Toàn Hệ Thống" value={formatNumber(apiUsageStats.totalRequests)} Icon={Cloud}/></Col>
+                    <Col span={6}><StatCard title="Chi Phí Ước Tính Hôm Nay" value={`$${(apiUsageStats.costToday || 0).toFixed(2)}`} Icon={DollarSign}/></Col>
                 </Row>
             </div>
 
@@ -242,8 +115,9 @@ const AdminDashboard: React.FC = () => {
                                 renderItem={(item: any) => (
                                     <List.Item>
                                         <div className="text-xs">
-                                            <span className="text-gray-500">[{item.time}]</span>{' '}
-                                            <span>{item.msg}</span>
+                                            <span className="text-gray-500 mr-2">[{new Date(item.timestamp).toLocaleString('vi-VN')}]</span>
+                                            <span className="font-semibold text-blue-600">{item.action}:</span>
+                                            <span className="ml-1">{item.details}</span>
                                         </div>
                                     </List.Item>
                                 )}
@@ -257,26 +131,18 @@ const AdminDashboard: React.FC = () => {
                     <AntCard title="🧠 Trạng Thái API Providers" size="small">
                         {apiProviders.length > 0 ? (
                             <div className="space-y-3">
-                                {apiProviders.slice(0, 4).map(provider => (
-                                    <div key={provider.id} className="flex justify-between items-center">
-                                        <div>
-                                            <span className="font-medium">{provider.provider}</span>
-                                            <span className="text-xs text-gray-500 ml-2">({provider.nickname})</span>
-                                        </div>
+                                {apiProviders.map(provider => (
+                                    <div key={provider._id} className="flex justify-between items-center">
+                                        <div className="font-medium">{provider.name}</div>
                                         <div className="flex items-center space-x-2">
-                                            <span className="text-xs">${provider.costToday.toFixed(2)}</span>
+                                            <span className="text-xs text-gray-500">${(provider.costToday || 0).toFixed(2)}</span>
                                             <div className={`w-2 h-2 rounded-full ${
-                                                provider.status === 'Active' ? 'bg-green-500' : 
-                                                provider.status === 'Error' ? 'bg-red-500' : 'bg-gray-400'
+                                                provider.status === 'Operational' ? 'bg-green-500' : 
+                                                provider.status === 'Error' ? 'bg-red-500' : 'bg-yellow-500' // Degraded
                                             }`}></div>
                                         </div>
                                     </div>
                                 ))}
-                                {apiProviders.length > 4 && (
-                                    <div className="text-center text-gray-500 text-xs">
-                                        +{apiProviders.length - 4} providers khác
-                                    </div>
-                                )}
                             </div>
                         ) : (
                             <Empty description="Chưa có API providers nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -288,4 +154,4 @@ const AdminDashboard: React.FC = () => {
     );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;
