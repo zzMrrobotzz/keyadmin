@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, message, Card as AntdCard } from 'antd';
+import { Table, Tag, message, Card } from 'antd';
 import { ApiStatus } from '../types';
 
 // Mock API status data (sẽ thay bằng API thật sau)
@@ -44,7 +44,7 @@ const AdminApiMonitoring: React.FC = () => {
     return (
         <div className="space-y-6 animate-fadeIn">
             <h1 className="text-3xl font-bold text-gray-800">Theo Dõi & Sức Khỏe API</h1>
-            <AntdCard>
+            <Card>
                 <Table 
                     dataSource={apiData} 
                     columns={columns}
@@ -52,7 +52,7 @@ const AdminApiMonitoring: React.FC = () => {
                     rowKey="id"
                     pagination={false}
                 />
-            </AntdCard>
+            </Card>
         </div>
     );
 };
