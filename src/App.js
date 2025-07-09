@@ -1,7 +1,7 @@
 // Final consolidated version
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Layout, Menu, Button, Card, Form, Input, message, Table, Tag, Space, Modal, Spin, Badge } from 'antd';
+import { Layout, Menu, Button, Card, Form, Input, message, Table, Tag, Space, Modal, Spin, Badge, InputNumber } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { saveAs } from 'file-saver';
 
@@ -101,8 +101,8 @@ const ApiProviderManager = () => {
 
     const columns = [
         { title: 'Provider', dataIndex: 'name', key: 'name' },
-        { title: 'API Keys Count', dataIndex: 'apiKeys', key: 'apiKeys', render: keys => keys?.length || 0 },
-        { title: 'Status', dataIndex: 'status', key: 'status', render: status => <Tag color={status === 'Operational' ? 'green' : 'red'}>{status}</Tag> },
+        { title: 'API Keys Count', dataIndex: 'apiKeys', key: 'apiKeys', render: (keys) => keys?.length || 0 },
+        { title: 'Status', dataIndex: 'status', key: 'status', render: (status) => <Tag color={status === 'Operational' ? 'green' : 'red'}>{status}</Tag> },
         { title: 'Action', key: 'action', render: (_, record) => <Button onClick={() => setSelectedProvider(record)}>Manage Keys</Button> },
     ];
 
@@ -160,9 +160,9 @@ const KeyManager = () => {
     
     const columns = [
         { title: "Key", dataIndex: "key", key: "key" },
-        { title: "Trạng thái", dataIndex: "isActive", key: "isActive", render: active => <Tag color={active ? 'green' : 'red'}>{active ? 'Hoạt động' : 'Đã thu hồi'}</Tag> },
-        { title: "Ngày tạo", dataIndex: "createdAt", key: "createdAt", render: date => new Date(date).toLocaleString() },
-        { title: "Credit", dataIndex: "credit", key: "credit", render: num => num ?? 0 },
+        { title: "Trạng thái", dataIndex: "isActive", key: "isActive", render: (active) => <Tag color={active ? 'green' : 'red'}>{active ? 'Hoạt động' : 'Đã thu hồi'}</Tag> },
+        { title: "Ngày tạo", dataIndex: "createdAt", key: "createdAt", render: (date) => new Date(date).toLocaleString() },
+        { title: "Credit", dataIndex: "credit", key: "credit", render: (num) => num ?? 0 },
     ];
 
     return (
@@ -174,9 +174,10 @@ const KeyManager = () => {
             </Spin>
             <Modal title="Tạo Key mới" open={isModalVisible} onCancel={() => setIsModalVisible(false)} footer={null}>
                 <Form form={form} layout="vertical" onFinish={handleCreateKey}>
+                    <Form.Item label="Key" name="key" rules={[{ required: true }]}><Input /></Form.Item>
                     <Form.Item label="Ngày hết hạn" name="expiredAt"><Input type="date" /></Form.Item>
-                    <Form.Item label="Số máy tối đa" name="maxActivations" initialValue={1}><Input type="number" min={1} /></Form.Item>
-                    <Form.Item label="Số credit" name="credit" initialValue={0}><Input type="number" min={0} /></Form.Item>
+                    <Form.Item label="Số máy tối đa" name="maxActivations" initialValue={1}><InputNumber min={1} /></Form.Item>
+                    <Form.Item label="Số credit" name="credit" initialValue={0}><InputNumber min={0} /></Form.Item>
                     <Form.Item label="Ghi chú" name="note"><Input /></Form.Item>
                     <Button type="primary" htmlType="submit" block>Tạo Key</Button>
                 </Form>
@@ -186,10 +187,10 @@ const KeyManager = () => {
 };
 
 
-// Main App Component - Final Version
+// Main App Component
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("admin_logged_in"));
-    const [currentView, setCurrentView] = useState('keys'); // 'keys' or 'providers'
+    const [currentView, setCurrentView] = useState('keys');
 
     const handleLogin = () => {
         localStorage.setItem("admin_logged_in", "1");
@@ -206,8 +207,8 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
                 <Card title="Đăng nhập Admin" style={{ width: 400 }}>
                     <Form onFinish={handleLogin} layout="vertical">
-                        <Form.Item label="Tài khoản" required><Input defaultValue={ADMIN_USER} onChange={e => { /* not a real login */ }} /></Form.Item>
-                        <Form.Item label="Mật khẩu" required><Input.Password defaultValue={ADMIN_PASS} onChange={e => { /* not a real login */ }} /></Form.Item>
+                        <Form.Item label="Tài khoản" required><Input defaultValue={ADMIN_USER} /></Form.Item>
+                        <Form.Item label="Mật khẩu" required><Input.Password defaultValue={ADMIN_PASS} /></Form.Item>
                         <Button type="primary" htmlType="submit" block>Đăng nhập</Button>
                     </Form>
                 </Card>
