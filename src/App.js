@@ -104,9 +104,17 @@ const ApiProviderManager = () => {
 
     const columns = [
         { title: 'Provider', dataIndex: 'name', key: 'name' },
-        { title: 'API Keys Count', dataIndex: 'apiKeys', key: 'apiKeys', render: (keys) => keys?.length || 0 },
+        { title: 'API Keys Count', dataIndex: 'apiKeys', key: 'apiKeys', render: (keys) => (keys ? keys.length : 0) },
         { title: 'Status', dataIndex: 'status', key: 'status', render: (status) => <Tag color={status === 'Operational' ? 'green' : 'red'}>{status}</Tag> },
-        { title: 'Action', key: 'action', render: (_, record) => <Button onClick={() => setSelectedProvider(record)}>Manage Keys</Button> },
+        {
+            title: 'Hành động',
+            key: 'action',
+            render: (_, record) => (
+                <Button onClick={() => setSelectedProvider(record)}>
+                    Quản lý Keys
+                </Button>
+            ),
+        },
     ];
 
     if (loading) {
