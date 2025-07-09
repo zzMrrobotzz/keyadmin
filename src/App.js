@@ -204,7 +204,7 @@ const KeyManager = () => {
 };
 
 
-// Main App Component
+// Main App Component - Final version with Manage Keys button
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("admin_logged_in"));
     const [currentView, setCurrentView] = useState('keys');
