@@ -80,11 +80,14 @@ const ApiProviderManager = () => {
 
     const fetchProviders = useCallback(async () => {
         setLoading(true);
+        setError(''); // Reset error state
         try {
             const response = await axios.get(`${API_BASE}/providers`);
-            setProviders(response.data);
+            setProviders(response.data || []); // Ensure providers is an array
         } catch (err) {
-            message.error('Failed to fetch API providers.');
+            const errorMsg = err.response?.data?.message || 'Failed to fetch API providers.';
+            setError(errorMsg);
+            message.error(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -106,12 +109,18 @@ const ApiProviderManager = () => {
         { title: 'Action', key: 'action', render: (_, record) => <Button onClick={() => setSelectedProvider(record)}>Manage Keys</Button> },
     ];
 
+    if (loading) {
+        return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
+    }
+
     return (
         <div>
-            <h1 style={{ marginBottom: '24px' }}>API Provider Management</h1>
-            <Spin spinning={loading}>
-                <Table dataSource={providers} columns={columns} rowKey="_id" />
-            </Spin>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h1>API Provider Management</h1>
+                <Button onClick={fetchProviders} icon={<PlusOutlined />}>Refresh</Button>
+            </div>
+            {error && <div style={{ color: 'red', border: '1px solid red', padding: '10px', marginBottom: '20px' }}><strong>Error:</strong> {error}</div>}
+            <Table dataSource={providers} columns={columns} rowKey="_id" />
             {selectedProvider && (
                 <ApiKeyManagerModal
                     provider={selectedProvider}
