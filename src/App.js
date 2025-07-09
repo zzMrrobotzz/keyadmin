@@ -107,11 +107,11 @@ const ApiProviderManager = () => {
         { title: 'API Keys Count', dataIndex: 'apiKeys', key: 'apiKeys', render: (keys) => (keys ? keys.length : 0) },
         { title: 'Status', dataIndex: 'status', key: 'status', render: (status) => <Tag color={status === 'Operational' ? 'green' : 'red'}>{status}</Tag> },
         {
-            title: 'Hành động',
+            title: 'Action',
             key: 'action',
             render: (_, record) => (
                 <Button onClick={() => setSelectedProvider(record)}>
-                    Quản lý Keys
+                    Manage Keys
                 </Button>
             ),
         },

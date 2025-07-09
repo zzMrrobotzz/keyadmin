@@ -1,1 +1,1 @@
-fix(admin): Force sync to add Manage Keys button
+feat(admin): Display Manage Keys button in UI
