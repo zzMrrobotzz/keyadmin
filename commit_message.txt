@@ -1,1 +1,1 @@
-fix(build): Temporarily remove formatter/parser to isolate error
+feat(admin): Add API management UI and consolidate components

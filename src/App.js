@@ -1,3 +1,4 @@
+// Final consolidated version
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Layout, Menu, Button, Card, Form, Input, message, Table, Tag, Space, Modal, Spin, Badge } from 'antd';
