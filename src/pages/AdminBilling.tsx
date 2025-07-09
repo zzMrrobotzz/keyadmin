@@ -124,8 +124,6 @@ const AdminBilling: React.FC = () => {
                         <InputNumber 
                             min={0} 
                             style={{ width: '100%' }} 
-                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={(value) => Number(value!.replace(/,/g, ''))}
                         />
                     </Form.Item>
                     <Form.Item name="credits" label="Số Credit" rules={[{ required: true }]}>
