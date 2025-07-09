@@ -1,1 +1,1 @@
-chore: Force final sync for admin panel
+fix(build): Correct type definitions and fix build error

@@ -49,7 +49,7 @@ export const fetchKeys = async () => {
 /**
  * Tạo một key mới.
  */
-export const createKey = async (payload: { expiredAt?: Date; maxActivations?: number; note?: string; credit?: number }) => {
+export const createKey = async (payload: { key: string; expiredAt?: Date; maxActivations?: number; note?: string; credit?: number }) => {
   try {
     const response = await apiClient.post('/keys', payload);
     return response.data;

@@ -86,19 +86,25 @@ const AdminKeyManagement: React.FC = () => {
     const handleFormSubmit = async () => {
         try {
             const values = await form.validateFields();
-            
-            const payload = {
-                note: values.note || '',
-                expiredAt: values.expiredAt ? values.expiredAt.toISOString() : null,
-                credit: Number(values.credit),
-                maxActivations: Number(values.maxActivations)
-            };
 
             if (editingKey) {
+                const payload = {
+                    note: values.note || '',
+                    expiredAt: values.expiredAt ? values.expiredAt.toISOString() : null,
+                    credit: Number(values.credit),
+                    maxActivations: Number(values.maxActivations)
+                };
                 await updateKeyDetails(editingKey._id, payload);
                 message.success('Cập nhật key thành công!');
             } else {
-                await createKey({ ...payload, key: values.key });
+                const payload = {
+                    key: values.key,
+                    note: values.note || '',
+                    expiredAt: values.expiredAt ? values.expiredAt.toISOString() : null,
+                    credit: Number(values.credit),
+                    maxActivations: Number(values.maxActivations)
+                };
+                await createKey(payload);
                 message.success('Tạo key thành công!');
             }
             setIsModalVisible(false);
