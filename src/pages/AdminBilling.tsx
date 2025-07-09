@@ -121,7 +121,12 @@ const AdminBilling: React.FC = () => {
                         <Input />
                     </Form.Item>
                     <Form.Item name="price" label="Giá (VNĐ)" rules={[{ required: true }]}>
-                        <InputNumber min={0} style={{ width: '100%' }} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value!.replace(/\$\s?|(,*)/g, '')} />
+                        <InputNumber 
+                            min={0} 
+                            style={{ width: '100%' }} 
+                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={(value) => Number(value!.replace(/,/g, ''))}
+                        />
                     </Form.Item>
                     <Form.Item name="credits" label="Số Credit" rules={[{ required: true }]}>
                         <InputNumber min={0} style={{ width: '100%' }} />
