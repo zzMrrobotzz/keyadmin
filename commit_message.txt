@@ -1,1 +1,1 @@
-fix(build): Refactor KeyManager logic and fix build error
+fix(admin): Consolidate all logic into single App.js to fix build error
