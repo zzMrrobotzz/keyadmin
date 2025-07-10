@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, message, Spin, Switch } from 'antd';
-import { fetchApiProviders } from '../services/keyService'; // Sửa lại: dùng hàm mới
+import { Table, Tag, Button, message, Spin, Switch, Modal, Input } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { fetchApiProviders, createApiProvider } from '../services/keyService';
 import { ManagedApiProvider } from '../types';
 
 const AdminApiProviders: React.FC = () => {
     const [providers, setProviders] = useState<ManagedApiProvider[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [newProviderName, setNewProviderName] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const loadProviders = async () => {
         try {
@@ -24,16 +28,35 @@ const AdminApiProviders: React.FC = () => {
     }, []);
 
     const handleStatusChange = async (providerId: string, newStatus: boolean) => {
-        // Tạm thời chưa có API để cập nhật, sẽ thêm sau
         message.info('Chức năng cập nhật trạng thái đang được phát triển.');
-        // Ví dụ khi có API:
-        // try {
-        //   await updateApiProviderStatus(providerId, newStatus ? 'Active' : 'Inactive');
-        //   message.success('Cập nhật trạng thái thành công!');
-        //   loadProviders(); 
-        // } catch (error: any) {
-        //   message.error(error.message || 'Cập nhật thất bại');
-        // }
+    };
+
+    const showCreateModal = () => {
+        setIsModalVisible(true);
+    };
+
+    const handleCreateProvider = async () => {
+        if (!newProviderName.trim()) {
+            message.warning('Tên provider không được để trống.');
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await createApiProvider(newProviderName);
+            message.success(`Provider '${newProviderName}' đã được tạo thành công!`);
+            setIsModalVisible(false);
+            setNewProviderName('');
+            loadProviders(); // Tải lại danh sách
+        } catch (error: any) {
+            message.error(error.message || 'Tạo provider thất bại.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setIsModalVisible(false);
+        setNewProviderName('');
     };
 
     const columns = [
@@ -51,7 +74,7 @@ const AdminApiProviders: React.FC = () => {
             }
         },
         { title: 'Tổng Requests', dataIndex: 'totalRequests', key: 'totalRequests', render: (val: number) => (val || 0).toLocaleString() },
-        { title: 'Chi phí Hôm Nay', dataIndex: 'costToday', key: 'costToday', render: (val: number) => `$${(val || 0).toFixed(2)}` },
+        { title: 'Chi phí Hôm Nay', dataIndex: 'costToday', key: 'costToday', render: (val: number) => `${(val || 0).toFixed(2)}` },
         {
             title: 'Hành động',
             key: 'action',
@@ -67,7 +90,7 @@ const AdminApiProviders: React.FC = () => {
         },
     ];
 
-    if (loading) {
+    if (loading && providers.length === 0) {
         return (
             <div className="flex justify-center items-center h-64">
                 <Spin size="large" tip="Đang tải danh sách nhà cung cấp..." />
@@ -79,18 +102,40 @@ const AdminApiProviders: React.FC = () => {
         <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-gray-800">Quản Lý API Providers</h1>
-                <Button type="primary" onClick={loadProviders} loading={loading}>
-                    Làm Mới
-                </Button>
+                <div>
+                    <Button onClick={loadProviders} loading={loading} style={{ marginRight: 8 }}>
+                        Làm Mới
+                    </Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={showCreateModal}>
+                        Tạo Provider Mới
+                    </Button>
+                </div>
             </div>
             <Table
                 columns={columns}
                 dataSource={providers}
                 rowKey="_id"
                 pagination={false}
+                loading={loading}
             />
+            <Modal
+                title="Tạo API Provider Mới"
+                visible={isModalVisible}
+                onOk={handleCreateProvider}
+                onCancel={handleCancel}
+                confirmLoading={isSubmitting}
+                okText="Tạo"
+                cancelText="Hủy"
+            >
+                <Input
+                    placeholder="Nhập tên nhà cung cấp (ví dụ: Gemini, OpenAI)"
+                    value={newProviderName}
+                    onChange={(e) => setNewProviderName(e.target.value)}
+                />
+            </Modal>
         </div>
     );
 };
+
 
 export default AdminApiProviders;

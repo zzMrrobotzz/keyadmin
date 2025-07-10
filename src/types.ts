@@ -2,6 +2,7 @@ export type AdminActiveModule =
   | 'dashboard'
   | 'keyManagement' // Hợp nhất user và key
   | 'apiProviders' // Quản lý API provider keys
+  | 'apiKeyPool' // Quản lý kho API key
   | 'billing'
   | 'suspiciousActivity'
   | 'apis'
@@ -106,4 +107,5 @@ export interface ManagedApiProvider {
   costToday: number;
   totalRequests: number;
   lastChecked: string;
+  apiKeys: string[]; // Thêm trường còn thiếu
 } 

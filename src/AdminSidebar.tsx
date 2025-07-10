@@ -1,6 +1,6 @@
 import React from 'react';
 import { AdminActiveModule } from './types';
-import { LayoutDashboard, KeyRound, CreditCard, ShieldAlert, Cloud, Settings, LogOut, Cpu } from 'lucide-react';
+import { LayoutDashboard, KeyRound, CreditCard, ShieldAlert, Cloud, Settings, LogOut, Cpu, Database } from 'lucide-react';
 
 interface AdminSidebarProps {
   activeModule: AdminActiveModule;
@@ -12,6 +12,7 @@ const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng Quan', icon: LayoutDashboard },
   { id: 'keyManagement', label: 'Quản Lý Key', icon: KeyRound },
   { id: 'apiProviders', label: 'Quản Lý API Providers', icon: Cpu },
+  { id: 'apiKeyPool', label: 'Quản lý Kho Key', icon: Database },
   { id: 'billing', label: 'Gói Cước & Thanh Toán', icon: CreditCard },
   { id: 'suspiciousActivity', label: 'Giám Sát & Log', icon: ShieldAlert },
   { id: 'apis', label: 'Theo Dõi API', icon: Cloud },

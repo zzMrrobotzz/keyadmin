@@ -154,7 +154,4 @@ const AdminDashboard: React.FC = () => {
     );
 };
 
- 
-e x p o r t   d e f a u l t   A d m i n D a s h b o a r d ; 
- 
- 
+export default AdminDashboard;

@@ -118,6 +118,18 @@ export const fetchApiProviders = async () => {
     }
 };
 
+/**
+ * Tạo một nhà cung cấp API mới.
+ */
+export const createApiProvider = async (name: string) => {
+    try {
+        const response = await apiClient.post('/providers', { name });
+        return response.data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
 // --- Credit Package Management ---
 
 /**
@@ -178,4 +190,32 @@ export const fetchAuditLogs = async () => {
     } catch (error) {
         handleError(error);
     }
+};
+
+/**
+ * Thêm một hoặc nhiều API key vào một provider.
+ * Backend API: POST /api/providers/:providerId/keys
+ */
+export const addApiKeyToProvider = async (providerId: string, apiKey: string) => {
+  try {
+    // Chú ý: Backend hiện tại chỉ hỗ trợ thêm 1 key mỗi lần gọi
+    const response = await apiClient.post(`/providers/${providerId}/keys`, { apiKey });
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+/**
+ * Xóa một API key khỏi một provider.
+ * Backend API: DELETE /api/providers/:providerId/keys
+ */
+export const deleteApiKeyFromProvider = async (providerId: string, apiKey: string) => {
+  try {
+    // Dữ liệu được gửi trong body của request DELETE
+    const response = await apiClient.delete(`/providers/${providerId}/keys`, { data: { apiKey } });
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
 };
