@@ -1,10 +1,14 @@
 import axios from 'axios';
 
 // --- Base API Configuration ---
-const API_BASE = process.env.REACT_APP_API_URL || "https://key-manager-backend.onrender.com/api";
+const API_BASE = process.env.REACT_APP_API_URL || "/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE,
+  timeout: 15000, // 15 seconds timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // --- Error Handling ---

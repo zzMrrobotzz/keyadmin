@@ -16,46 +16,69 @@ const AdminDashboard: React.FC = () => {
     const [apiUsageStats, setApiUsageStats] = useState({ totalRequests: 0, costToday: 0 });
     const [apiProviders, setApiProviders] = useState<ManagedApiProvider[]>([]);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    
+    // Loading states riêng biệt
+    const [loadingKeys, setLoadingKeys] = useState(true);
+    const [loadingStats, setLoadingStats] = useState(true);
+    const [loadingProviders, setLoadingProviders] = useState(true);
+    const [loadingLogs, setLoadingLogs] = useState(true);
 
     useEffect(() => {
-        const getDashboardData = async () => {
+        // Load từng phần dữ liệu độc lập để tránh chậm
+        const loadKeyStats = async () => {
             try {
-                setLoading(true);
-                
-                // Gọi song song các API để tải nhanh hơn
-                const [keysData, statsData, providersData, logsData] = await Promise.all([
-                    fetchKeys(),
-                    fetchDashboardStats(),
-                    fetchApiProviders(),
-                    fetchAuditLogs()
-                ]);
-
-                // Xử lý và cập nhật state cho Key
+                const keysData = await fetchKeys();
                 if (keysData && keysData.length > 0) {
                     const now = new Date();
                     const activeKeys = keysData.filter((k: AdminKey) => k.isActive).length;
                     const expiredKeys = keysData.filter((k: AdminKey) => k.expiredAt && new Date(k.expiredAt) < now).length;
                     setKeyStats({ total: keysData.length, active: activeKeys, expired: expiredKeys });
                 }
+            } catch (error: any) {
+                console.error('Error loading key stats:', error);
+            }
+        };
 
-                // Xử lý và cập nhật state cho Stats
+        const loadBillingStats = async () => {
+            try {
+                const statsData = await fetchDashboardStats();
                 if (statsData) {
                     setBillingStats(statsData.billingStats);
                     setApiUsageStats(statsData.apiUsageStats);
                 }
-
-                // Cập nhật state cho Providers và Logs
-                setApiProviders(providersData || []);
-                setAuditLogs(logsData || []);
-
             } catch (error: any) {
-                message.error(error.message || 'Không thể tải dữ liệu dashboard!');
-            } finally {
-                setLoading(false);
+                console.error('Error loading billing stats:', error);
             }
         };
-        getDashboardData();
+
+        const loadProviders = async () => {
+            try {
+                const providersData = await fetchApiProviders();
+                setApiProviders(providersData || []);
+            } catch (error: any) {
+                console.error('Error loading providers:', error);
+            }
+        };
+
+        const loadAuditLogs = async () => {
+            try {
+                const logsData = await fetchAuditLogs();
+                setAuditLogs(logsData || []);
+            } catch (error: any) {
+                console.error('Error loading audit logs:', error);
+            }
+        };
+
+        // Load từng phần dữ liệu độc lập
+        setLoading(true);
+        Promise.allSettled([
+            loadKeyStats(),
+            loadBillingStats(), 
+            loadProviders(),
+            loadAuditLogs()
+        ]).finally(() => {
+            setLoading(false);
+        });
     }, []);
 
     if (loading) {
