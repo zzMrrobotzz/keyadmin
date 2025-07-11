@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
-import { fetchKeys, fetchDashboardStats, fetchAuditLogs, fetchApiProviders } from '../services/keyService';
+import { fetchKeys, fetchDashboardStats, fetchAuditLogs, fetchApiProviders, wakeUpBackend } from '../services/keyService';
 import { DollarSign, KeyRound, Users, Activity, Cpu, Cloud, Shield, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
 import { message, Empty, Row, Col, List, Card as AntCard, Spin, Skeleton } from 'antd';
 import { AdminKey, ManagedApiProvider } from '../types';
@@ -69,6 +69,9 @@ const AdminDashboard: React.FC = () => {
             }
         };
 
+        // Wake up backend trước khi load data
+        wakeUpBackend();
+        
         // Load từng phần dữ liệu độc lập
         loadKeyStats();
         loadBillingStats(); 

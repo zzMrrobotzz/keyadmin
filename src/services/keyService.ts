@@ -1,15 +1,58 @@
 import axios from 'axios';
 
 // --- Base API Configuration ---
-const API_BASE = process.env.REACT_APP_API_URL || "/api";
+const API_BASE = process.env.REACT_APP_API_URL || (
+  window.location.hostname === 'localhost' 
+    ? "/api" 
+    : "https://key-manager-backend.onrender.com/api"
+);
 
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 15000, // 15 seconds timeout
+  timeout: 30000, // Tăng lên 30 giây để chờ cold start
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Retry interceptor để xử lý cold start
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const { config } = error;
+    
+    // Retry logic cho timeout hoặc network errors
+    if (!config.__retryCount) {
+      config.__retryCount = 0;
+    }
+    
+    if (config.__retryCount < 2 && (
+      error.code === 'ECONNABORTED' || 
+      error.message.includes('timeout') ||
+      error.message.includes('Network Error')
+    )) {
+      config.__retryCount += 1;
+      console.log(`Retry attempt ${config.__retryCount} for ${config.url}`);
+      
+      // Đợi 2 giây trước khi retry
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return apiClient(config);
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Wake up backend để tránh cold start
+export const wakeUpBackend = async () => {
+  try {
+    console.log('Waking up backend...');
+    await apiClient.get('/health', { timeout: 5000 });
+    console.log('Backend is awake!');
+  } catch (error) {
+    console.log('Backend wake up failed, but continuing...');
+  }
+};
 
 // --- Error Handling ---
 const handleError = (error: any) => {
