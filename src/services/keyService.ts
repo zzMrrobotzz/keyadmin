@@ -1,172 +1,182 @@
 import axios from 'axios';
-import { mockDataService, simulateNetworkDelay } from './mockDataService';
 
 // --- Base API Configuration ---
 const API_BASE = process.env.REACT_APP_API_URL || "/api";
 
 const apiClient = axios.create({
     baseURL: API_BASE,
-    timeout: 10000,
+    timeout: 15000, // Increased timeout
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Flag to track backend status
-let isBackendAvailable = true;
-
-// Retry interceptor with fallback logic
-apiClient.interceptors.response.use(
-    (response) => {
-        isBackendAvailable = true;
-        return response;
-    },
-    async (error) => {
-        if (error.code === 'ECONNABORTED' || 
-                error.message.includes('timeout') ||
-                error.message.includes('Network Error') ||
-                error.message.includes('Receiving end does not exist')) {
-            isBackendAvailable = false;
-        }
-        return Promise.reject(error);
-    }
-);
-
-// --- Fallback Helper ---
-const withFallback = async (apiCall: () => Promise<any>, mockData: any) => {
-    try {
-        if (!isBackendAvailable) {
-            console.log('Backend unavailable, using mock data');
-            await simulateNetworkDelay(800);
-            return mockData;
-        }
-        const result = await apiCall();
-        return result;
-    } catch (error) {
-        console.error('API call failed, falling back to mock data:', error);
-        isBackendAvailable = false;
-        await simulateNetworkDelay(500);
-        return mockData;
-    }
-};
-
-// --- API Service Functions with Fallback ---
-export const fetchDashboardStats = async () => {
-    return withFallback(
-        () => apiClient.get('/stats/dashboard').then(res => res.data),
-        mockDataService.dashboardStats
-    );
-};
-
-export const fetchKeys = async () => {
-    return withFallback(
-        () => apiClient.get('/keys').then(res => res.data),
-        mockDataService.keys
-    );
-};
-
-export const fetchApiProviders = async () => {
-    return withFallback(
-        () => apiClient.get('/providers').then(res => res.data),
-        mockDataService.apiProviders
-    );
-};
-
-export const fetchAuditLogs = async () => {
-    return withFallback(
-        () => apiClient.get('/audit-log').then(res => res.data),
-        mockDataService.auditLogs
-    );
-};
-
-export const fetchPackages = async () => {
-    return withFallback(
-        () => apiClient.get('/packages').then(res => res.data),
-        mockDataService.packages
-    );
-};
-
-// --- Write Operations (Backend Only) ---
-const handleWriteError = (error: any, context: string) => {
-    if (!isBackendAvailable) {
-        throw new Error(`Chức năng ${context} cần backend hoạt động. Vui lòng thử lại sau.`);
-    }
+// --- Centralized Error Handler ---
+const handleApiError = (error: any, context: string) => {
+    console.error(`API Error in ${context}:`, error);
     if (error.response) {
         const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
         throw new Error(errorMsg);
+    } else if (error.request) {
+        throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
     } else {
-        throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+        throw new Error(error.message || 'Lỗi không xác định. Vui lòng thử lại.');
     }
 };
 
-export const createKey = async (payload: { key: string; expiredAt?: Date; maxActivations?: number; note?: string; credit?: number }) => {
+// --- Backend Status ---
+let isBackendAwake = false;
+export const getBackendStatus = () => isBackendAwake;
+
+export const wakeUpBackend = async () => {
     try {
-        const response = await apiClient.post('/keys', payload);
-        return response.data;
+        await apiClient.get('/status');
+        isBackendAwake = true;
+        return true;
     } catch (error) {
-        handleWriteError(error, 'tạo key');
+        isBackendAwake = false;
+        console.error("Backend wakeup call failed:", error);
+        return false;
     }
 };
 
-export const revokeKey = async (key: string) => {
+// --- Read Operations ---
+export const fetchDashboardStats = async () => {
     try {
-        const response = await apiClient.post('/keys/revoke', { key });
-        return response.data;
+        const { data } = await apiClient.get('/stats/dashboard');
+        return data;
     } catch (error) {
-        handleWriteError(error, 'thu hồi key');
+        handleApiError(error, 'fetchDashboardStats');
+    }
+};
+
+export const fetchKeys = async () => {
+    try {
+        const { data } = await apiClient.get('/keys');
+        return data;
+    } catch (error) {
+        handleApiError(error, 'fetchKeys');
+    }
+};
+
+export const fetchApiProviders = async () => {
+    try {
+        const { data } = await apiClient.get('/providers');
+        return data;
+    } catch (error) {
+        handleApiError(error, 'fetchApiProviders');
+    }
+};
+
+export const fetchAuditLogs = async () => {
+    try {
+        const { data } = await apiClient.get('/audit-log');
+        return data;
+    } catch (error) {
+        handleApiError(error, 'fetchAuditLogs');
+    }
+};
+
+export const fetchPackages = async () => {
+    try {
+        const { data } = await apiClient.get('/packages');
+        return data;
+    } catch (error) {
+        handleApiError(error, 'fetchPackages');
+    }
+};
+
+// --- Write Operations ---
+
+// Key Management
+export const createKey = async (payload: any) => {
+    try {
+        const { data } = await apiClient.post('/keys', payload);
+        return data;
+    } catch (error) {
+        handleApiError(error, 'createKey');
     }
 };
 
 export const updateCredit = async (key: string, amount: number) => {
     try {
-        const response = await apiClient.post('/keys/update-credit', { key, amount });
-        return response.data;
+        const { data } = await apiClient.post('/keys/update-credit', { key, amount });
+        return data;
     } catch (error) {
-        handleWriteError(error, 'cập nhật credit');
+        handleApiError(error, 'updateCredit');
     }
 };
 
-export const updateKeyDetails = async (keyId: string, payload: { note?: string; expiredAt?: string | null; credit?: number; maxActivations?: number }) => {
+export const updateKeyDetails = async (keyId: string, payload: any) => {
     try {
-        const response = await apiClient.put(`/keys/${keyId}/details`, payload);
-        return response.data;
+        const { data } = await apiClient.put(`/keys/${keyId}/details`, payload);
+        return data;
     } catch (error) {
-        handleWriteError(error, 'cập nhật chi tiết key');
+        handleApiError(error, 'updateKeyDetails');
     }
 };
 
 export const updateKeyStatus = async (keyId: string, isActive: boolean) => {
     try {
-        const response = await apiClient.put(`/keys/${keyId}/status`, { isActive });
-        return response.data;
+        const { data } = await apiClient.put(`/keys/${keyId}/status`, { isActive });
+        return data;
     } catch (error) {
-        handleWriteError(error, 'cập nhật trạng thái key');
+        handleApiError(error, 'updateKeyStatus');
     }
 };
 
-export const addApiKeyToProvider = async (providerId: string, apiKey: { key: string; nickname: string }) => {
+// Provider Management
+export const createApiProvider = async (name: string) => {
     try {
-        const response = await apiClient.post(`/providers/${providerId}/keys`, apiKey);
-        return response.data;
+        const { data } = await apiClient.post('/providers', { name });
+        return data;
     } catch (error) {
-        handleWriteError(error, 'thêm API key');
+        handleApiError(error, 'createApiProvider');
+    }
+};
+
+export const addApiKeyToProvider = async (providerId: string, apiKey: any) => {
+    try {
+        const { data } = await apiClient.post(`/providers/${providerId}/keys`, apiKey);
+        return data;
+    } catch (error) {
+        handleApiError(error, 'addApiKeyToProvider');
     }
 };
 
 export const deleteApiKeyFromProvider = async (providerId: string, apiKeyId: string) => {
     try {
-        const response = await apiClient.delete(`/providers/${providerId}/keys/${apiKeyId}`);
-        return response.data;
+        const { data } = await apiClient.delete(`/providers/${providerId}/keys/${apiKeyId}`);
+        return data;
     } catch (error) {
-        handleWriteError(error, 'xóa API key');
+        handleApiError(error, 'deleteApiKeyFromProvider');
     }
 };
 
-export const createApiProvider = async (name: string) => {
+// Package Management
+export const createPackage = async (pkg: any) => {
     try {
-        const response = await apiClient.post('/providers', { name });
-        return response.data;
+        const { data } = await apiClient.post('/packages', pkg);
+        return data;
     } catch (error) {
-        handleWriteError(error, 'tạo API provider');
+        handleApiError(error, 'createPackage');
+    }
+};
+
+export const updatePackage = async (packageId: string, pkg: any) => {
+    try {
+        const { data } = await apiClient.put(`/packages/${packageId}`, pkg);
+        return data;
+    } catch (error) {
+        handleApiError(error, 'updatePackage');
+    }
+};
+
+export const deletePackage = async (packageId: string) => {
+    try {
+        const { data } = await apiClient.delete(`/packages/${packageId}`);
+        return data;
+    } catch (error) {
+        handleApiError(error, 'deletePackage');
     }
 };
