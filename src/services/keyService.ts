@@ -87,87 +87,77 @@ export const fetchPackages = async () => {
 };
 
 // --- Write Operations (Backend Only) ---
-export const createKey = async (payload: { key: string; expiredAt?: Date; maxActivations?: number; note?: string; credit?: number }) => {
+const handleWriteError = (error: any, context: string) => {
     if (!isBackendAvailable) {
-        throw new Error('Chức năng tạo key cần backend hoạt động. Vui lòng thử lại sau.');
+        throw new Error(`Chức năng ${context} cần backend hoạt động. Vui lòng thử lại sau.`);
     }
+    if (error.response) {
+        const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
+        throw new Error(errorMsg);
+    } else {
+        throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+    }
+};
+
+export const createKey = async (payload: { key: string; expiredAt?: Date; maxActivations?: number; note?: string; credit?: number }) => {
     try {
         const response = await apiClient.post('/keys', payload);
         return response.data;
-    } catch (error: any) {
-        if (error.response) {
-            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
-            throw new Error(errorMsg);
-        } else {
-            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
-        }
+    } catch (error) {
+        handleWriteError(error, 'tạo key');
     }
 };
 
 export const revokeKey = async (key: string) => {
-    if (!isBackendAvailable) {
-        throw new Error('Chức năng thu hồi key cần backend hoạt động. Vui lòng thử lại sau.');
-    }
     try {
         const response = await apiClient.post('/keys/revoke', { key });
         return response.data;
-    } catch (error: any) {
-        if (error.response) {
-            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
-            throw new Error(errorMsg);
-        } else {
-            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
-        }
+    } catch (error) {
+        handleWriteError(error, 'thu hồi key');
     }
 };
 
 export const updateCredit = async (key: string, amount: number) => {
-    if (!isBackendAvailable) {
-        throw new Error('Chức năng cập nhật credit cần backend hoạt động. Vui lòng thử lại sau.');
-    }
     try {
         const response = await apiClient.post('/keys/update-credit', { key, amount });
         return response.data;
-    } catch (error: any) {
-        if (error.response) {
-            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
-            throw new Error(errorMsg);
-        } else {
-            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
-        }
+    } catch (error) {
+        handleWriteError(error, 'cập nhật credit');
     }
 };
 
 export const updateKeyDetails = async (keyId: string, payload: { note?: string; expiredAt?: string | null; credit?: number; maxActivations?: number }) => {
-    if (!isBackendAvailable) {
-        throw new Error('Chức năng cập nhật chi tiết key cần backend hoạt động. Vui lòng thử lại sau.');
-    }
     try {
         const response = await apiClient.put(`/keys/${keyId}/details`, payload);
         return response.data;
-    } catch (error: any) {
-        if (error.response) {
-            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
-            throw new Error(errorMsg);
-        } else {
-            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
-        }
+    } catch (error) {
+        handleWriteError(error, 'cập nhật chi tiết key');
     }
 };
 
 export const updateKeyStatus = async (keyId: string, isActive: boolean) => {
-    if (!isBackendAvailable) {
-        throw new Error('Chức năng cập nhật trạng thái key cần backend hoạt động. Vui lòng thử lại sau.');
-    }
     try {
         const response = await apiClient.put(`/keys/${keyId}/status`, { isActive });
         return response.data;
-    } catch (error: any) {
-        if (error.response) {
-            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
-            throw new Error(errorMsg);
-        } else {
-            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
-        }
+    } catch (error) {
+        handleWriteError(error, 'cập nhật trạng thái key');
+    }
+};
+
+export const addApiKeyToProvider = async (providerId: string, apiKey: { key: string; nickname: string }) => {
+    try {
+        const response = await apiClient.post(`/providers/${providerId}/keys`, apiKey);
+        return response.data;
+    } catch (error) {
+        handleWriteError(error, 'thêm API key');
+    }
+};
+
+export const deleteApiKeyFromProvider = async (providerId: string, apiKeyId: string) => {
+    try {
+        const response = await apiClient.delete(`/providers/${providerId}/keys/${apiKeyId}`);
+        return response.data;
+    } catch (error) {
+        handleWriteError(error, 'xóa API key');
     }
 };
