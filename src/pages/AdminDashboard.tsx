@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
 import { fetchKeys, fetchDashboardStats, fetchAuditLogs, fetchApiProviders } from '../services/keyService';
 import { DollarSign, KeyRound, Users, Activity, Cpu, Cloud, Shield, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
-import { message, Empty, Row, Col, List, Card as AntCard, Spin } from 'antd';
+import { message, Empty, Row, Col, List, Card as AntCard, Spin, Skeleton } from 'antd';
 import { AdminKey, ManagedApiProvider } from '../types';
 
 // Helper để định dạng số và tiền tệ
@@ -70,24 +70,13 @@ const AdminDashboard: React.FC = () => {
         };
 
         // Load từng phần dữ liệu độc lập
-        setLoading(true);
-        Promise.allSettled([
-            loadKeyStats(),
-            loadBillingStats(), 
-            loadProviders(),
-            loadAuditLogs()
-        ]).finally(() => {
-            setLoading(false);
-        });
+        loadKeyStats();
+        loadBillingStats(); 
+        loadProviders();
+        loadAuditLogs();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <Spin size="large" tip="Đang tải dữ liệu hệ thống..." />
-            </div>
-        );
-    }
+
     
     const activeProvidersCount = apiProviders.filter(p => p.status === 'Operational').length;
 
