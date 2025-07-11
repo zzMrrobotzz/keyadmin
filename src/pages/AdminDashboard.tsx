@@ -93,11 +93,11 @@ const AdminDashboard: React.FC = () => {
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-gray-800">Tổng Quan Hệ Thống</h1>
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    backendStatus.isAvailable 
+                    backendStatus 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                    {backendStatus.isAvailable ? '🟢' : '🟡'} {backendStatus.message}
+                    {backendStatus ? '🟢 Backend Online' : '🟡 Backend Starting...'}
                 </div>
             </div>
             
