@@ -137,3 +137,37 @@ export const updateCredit = async (key: string, amount: number) => {
         }
     }
 };
+
+export const updateKeyDetails = async (keyId: string, payload: { note?: string; expiredAt?: string | null; credit?: number; maxActivations?: number }) => {
+    if (!isBackendAvailable) {
+        throw new Error('Chức năng cập nhật chi tiết key cần backend hoạt động. Vui lòng thử lại sau.');
+    }
+    try {
+        const response = await apiClient.put(`/keys/${keyId}/details`, payload);
+        return response.data;
+    } catch (error: any) {
+        if (error.response) {
+            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
+            throw new Error(errorMsg);
+        } else {
+            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+        }
+    }
+};
+
+export const updateKeyStatus = async (keyId: string, isActive: boolean) => {
+    if (!isBackendAvailable) {
+        throw new Error('Chức năng cập nhật trạng thái key cần backend hoạt động. Vui lòng thử lại sau.');
+    }
+    try {
+        const response = await apiClient.put(`/keys/${keyId}/status`, { isActive });
+        return response.data;
+    } catch (error: any) {
+        if (error.response) {
+            const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
+            throw new Error(errorMsg);
+        } else {
+            throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+        }
+    }
+};
