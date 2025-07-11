@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
-import { fetchKeys, fetchDashboardStats, fetchAuditLogs, fetchApiProviders, wakeUpBackend } from '../services/keyService';
+import { fetchKeys, fetchDashboardStats, fetchAuditLogs, fetchApiProviders, wakeUpBackend, getBackendStatus } from '../services/keyService';
 import { DollarSign, KeyRound, Users, Activity, Cpu, Cloud, Shield, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
 import { message, Empty, Row, Col, List, Card as AntCard, Spin, Skeleton } from 'antd';
 import { AdminKey, ManagedApiProvider } from '../types';
@@ -22,6 +22,9 @@ const AdminDashboard: React.FC = () => {
     const [loadingStats, setLoadingStats] = useState(true);
     const [loadingProviders, setLoadingProviders] = useState(true);
     const [loadingLogs, setLoadingLogs] = useState(true);
+    
+    // Backend status
+    const [backendStatus, setBackendStatus] = useState(getBackendStatus());
 
     useEffect(() => {
         // Load từng phần dữ liệu độc lập để tránh chậm
@@ -70,7 +73,9 @@ const AdminDashboard: React.FC = () => {
         };
 
         // Wake up backend trước khi load data
-        wakeUpBackend();
+        wakeUpBackend().finally(() => {
+            setBackendStatus(getBackendStatus());
+        });
         
         // Load từng phần dữ liệu độc lập
         loadKeyStats();
@@ -85,7 +90,16 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <div className="space-y-8 animate-fadeIn">
-            <h1 className="text-3xl font-bold text-gray-800">Tổng Quan Hệ Thống</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold text-gray-800">Tổng Quan Hệ Thống</h1>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    backendStatus.isAvailable 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                    {backendStatus.isAvailable ? '🟢' : '🟡'} {backendStatus.message}
+                </div>
+            </div>
             
             {/* Key Statistics */}
             <div>

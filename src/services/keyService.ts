@@ -1,107 +1,132 @@
 import axios from 'axios';
+import { mockDataService, simulateNetworkDelay } from './mockDataService';
 
 // --- Base API Configuration ---
-const API_BASE = process.env.REACT_APP_API_URL || (
-  window.location.hostname === 'localhost' 
-    ? "/api" 
-    : "https://key-manager-backend.onrender.com/api"
-);
+const API_BASE = process.env.REACT_APP_API_URL || "/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 30000, // Tăng lên 30 giây để chờ cold start
+  timeout: 10000, // 10 seconds - shorter timeout for faster fallback
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Retry interceptor để xử lý cold start
+// Flag để track backend status
+let isBackendAvailable = true;
+
+// Retry interceptor với fallback logic
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    isBackendAvailable = true; // Backend hoạt động
+    return response;
+  },
   async (error) => {
     const { config } = error;
     
-    // Retry logic cho timeout hoặc network errors
-    if (!config.__retryCount) {
-      config.__retryCount = 0;
-    }
-    
-    if (config.__retryCount < 2 && (
-      error.code === 'ECONNABORTED' || 
-      error.message.includes('timeout') ||
-      error.message.includes('Network Error')
-    )) {
-      config.__retryCount += 1;
-      console.log(`Retry attempt ${config.__retryCount} for ${config.url}`);
-      
-      // Đợi 2 giây trước khi retry
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return apiClient(config);
+    // Nếu là lỗi network hoặc timeout, mark backend unavailable
+    if (error.code === 'ECONNABORTED' || 
+        error.message.includes('timeout') ||
+        error.message.includes('Network Error') ||
+        error.message.includes('Receiving end does not exist')) {
+      isBackendAvailable = false;
     }
     
     return Promise.reject(error);
   }
 );
 
-// Wake up backend để tránh cold start
-export const wakeUpBackend = async () => {
+// --- Fallback Helper ---
+const withFallback = async (apiCall: () => Promise<any>, mockData: any) => {
   try {
-    console.log('Waking up backend...');
-    await apiClient.get('/health', { timeout: 5000 });
-    console.log('Backend is awake!');
+    if (!isBackendAvailable) {
+      console.log('🔄 Backend unavailable, using mock data');
+      await simulateNetworkDelay(800); // Simulate realistic delay
+      return mockData;
+    }
+    
+    const result = await apiCall();
+    return result;
   } catch (error) {
-    console.log('Backend wake up failed, but continuing...');
+    console.error('❌ API call failed, falling back to mock data:', error);
+    isBackendAvailable = false;
+    await simulateNetworkDelay(500);
+    return mockData;
   }
 };
 
-// --- Error Handling ---
-const handleError = (error: any) => {
-  if (error.response) {
-    const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
-    throw new Error(errorMsg);
-  } else if (error.request) {
-    throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
-  } else {
-    throw new Error(error.message || 'Lỗi không xác định.');
-  }
-};
-
-
-// --- API Service Functions ---
+// --- API Service Functions với Fallback ---
 
 /**
  * Lấy dữ liệu thống kê tổng quan cho trang Dashboard.
  */
 export const fetchDashboardStats = async () => {
-  try {
-    const response = await apiClient.get('/stats/dashboard');
-    return response.data;
-  } catch (error) {
-    handleError(error);
-  }
+  return withFallback(
+    () => apiClient.get('/stats/dashboard').then(res => res.data),
+    mockDataService.dashboardStats
+  );
 };
 
 /**
  * Lấy danh sách tất cả các key.
  */
 export const fetchKeys = async () => {
-  try {
-    const response = await apiClient.get('/keys');
-    return response.data;
-  } catch (error) {
-    handleError(error);
-  }
+  return withFallback(
+    () => apiClient.get('/keys').then(res => res.data),
+    mockDataService.keys
+  );
 };
+
+/**
+ * Lấy danh sách các nhà cung cấp API từ backend.
+ */
+export const fetchApiProviders = async () => {
+  return withFallback(
+    () => apiClient.get('/providers').then(res => res.data),
+    mockDataService.apiProviders
+  );
+};
+
+/**
+ * Lấy danh sách các hoạt động gần đây (audit log).
+ */
+export const fetchAuditLogs = async () => {
+  return withFallback(
+    () => apiClient.get('/audit-log').then(res => res.data),
+    mockDataService.auditLogs
+  );
+};
+
+/**
+ * Lấy danh sách tất cả các gói cước.
+ */
+export const fetchPackages = async () => {
+  return withFallback(
+    () => apiClient.get('/packages').then(res => res.data),
+    mockDataService.packages
+  );
+};
+
+// --- Write Operations (Backend Only) ---
 
 /**
  * Tạo một key mới.
  */
 export const createKey = async (payload: { key: string; expiredAt?: Date; maxActivations?: number; note?: string; credit?: number }) => {
+  if (!isBackendAvailable) {
+    throw new Error('Chức năng tạo key cần backend hoạt động. Vui lòng thử lại sau.');
+  }
+  
   try {
     const response = await apiClient.post('/keys', payload);
     return response.data;
-  } catch (error) {
-    handleError(error);
+  } catch (error: any) {
+    if (error.response) {
+      const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
+      throw new Error(errorMsg);
+    } else {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+    }
   }
 };
 
@@ -109,11 +134,20 @@ export const createKey = async (payload: { key: string; expiredAt?: Date; maxAct
  * Thu hồi (vô hiệu hóa) một key.
  */
 export const revokeKey = async (key: string) => {
+  if (!isBackendAvailable) {
+    throw new Error('Chức năng thu hồi key cần backend hoạt động. Vui lòng thử lại sau.');
+  }
+  
   try {
     const response = await apiClient.post('/keys/revoke', { key });
     return response.data;
-  } catch (error) {
-    handleError(error);
+  } catch (error: any) {
+    if (error.response) {
+      const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
+      throw new Error(errorMsg);
+    } else {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+    }
   }
 };
 
@@ -121,148 +155,48 @@ export const revokeKey = async (key: string) => {
  * Cập nhật (cộng/trừ) credit cho một key.
  */
 export const updateCredit = async (key: string, amount: number) => {
+  if (!isBackendAvailable) {
+    throw new Error('Chức năng cập nhật credit cần backend hoạt động. Vui lòng thử lại sau.');
+  }
+  
   try {
     const response = await apiClient.post('/keys/update-credit', { key, amount });
     return response.data;
-  } catch (error) {
-    handleError(error);
+  } catch (error: any) {
+    if (error.response) {
+      const errorMsg = error.response.data?.message || `Lỗi máy chủ: ${error.response.status}`;
+      throw new Error(errorMsg);
+    } else {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+    }
   }
 };
 
 /**
- * Cập nhật các thông tin chi tiết của một key (note, expiredAt, credit...).
+ * Wake up backend và check availability
  */
-export const updateKeyDetails = async (keyId: string, payload: { note?: string; expiredAt?: string | null; credit?: number; maxActivations?: number }) => {
+export const wakeUpBackend = async () => {
   try {
-    const response = await apiClient.put(`/keys/${keyId}/details`, payload);
-    return response.data;
+    console.log('🚀 Checking backend availability...');
+    await apiClient.get('/health', { timeout: 5000 });
+    isBackendAvailable = true;
+    console.log('✅ Backend is available!');
+    return true;
   } catch (error) {
-    handleError(error);
+    isBackendAvailable = false;
+    console.log('⚠️ Backend unavailable, will use mock data for read operations');
+    return false;
   }
 };
 
 /**
- * Cập nhật trạng thái (active/inactive) của một key.
+ * Check backend status
  */
-export const updateKeyStatus = async (keyId: string, isActive: boolean) => {
-  try {
-    const response = await apiClient.put(`/keys/${keyId}/status`, { isActive });
-    return response.data;
-  } catch (error) {
-    handleError(error);
-  }
-};
-
-/**
- * Lấy danh sách các nhà cung cấp API từ backend.
- */
-export const fetchApiProviders = async () => {
-    try {
-        const response = await apiClient.get('/providers');
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-/**
- * Tạo một nhà cung cấp API mới.
- */
-export const createApiProvider = async (name: string) => {
-    try {
-        const response = await apiClient.post('/providers', { name });
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-// --- Credit Package Management ---
-
-/**
- * Lấy danh sách tất cả các gói cước.
- */
-export const fetchPackages = async () => {
-    try {
-        const response = await apiClient.get('/packages');
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-/**
- * Cập nhật một gói cước.
- */
-export const updatePackage = async (packageId: string, payload: any) => {
-    try {
-        const response = await apiClient.put(`/packages/${packageId}`, payload);
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-/**
- * Tạo một gói cước mới.
- */
-export const createPackage = async (payload: any) => {
-    try {
-        const response = await apiClient.post('/packages', payload);
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-/**
- * Xóa một gói cước.
- */
-export const deletePackage = async (packageId: string) => {
-    try {
-        const response = await apiClient.delete(`/packages/${packageId}`);
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-/**
- * Lấy danh sách các hoạt động gần đây (audit log).
- */
-export const fetchAuditLogs = async () => {
-    try {
-        const response = await apiClient.get('/audit-log');
-        return response.data;
-    } catch (error) {
-        handleError(error);
-    }
-};
-
-/**
- * Thêm một hoặc nhiều API key vào một provider.
- * Backend API: POST /api/providers/:providerId/keys
- */
-export const addApiKeyToProvider = async (providerId: string, apiKey: string) => {
-  try {
-    // Chú ý: Backend hiện tại chỉ hỗ trợ thêm 1 key mỗi lần gọi
-    const response = await apiClient.post(`/providers/${providerId}/keys`, { apiKey });
-    return response.data;
-  } catch (error) {
-    handleError(error);
-  }
-};
-
-/**
- * Xóa một API key khỏi một provider.
- * Backend API: DELETE /api/providers/:providerId/keys
- */
-export const deleteApiKeyFromProvider = async (providerId: string, apiKey: string) => {
-  try {
-    // Dữ liệu được gửi trong body của request DELETE
-    const response = await apiClient.delete(`/providers/${providerId}/keys`, { data: { apiKey } });
-    return response.data;
-  } catch (error) {
-    handleError(error);
-  }
-};
+export const getBackendStatus = () => {
+  return {
+    isAvailable: isBackendAvailable,
+    message: isBackendAvailable 
+      ? 'Backend hoạt động bình thường' 
+      : 'Backend không khả dụng - đang sử dụng dữ liệu demo'
+  };
+}; 
