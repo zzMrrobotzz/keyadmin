@@ -161,3 +161,12 @@ export const deleteApiKeyFromProvider = async (providerId: string, apiKeyId: str
         handleWriteError(error, 'xóa API key');
     }
 };
+
+export const createApiProvider = async (name: string) => {
+    try {
+        const response = await apiClient.post('/providers', { name });
+        return response.data;
+    } catch (error) {
+        handleWriteError(error, 'tạo API provider');
+    }
+};
