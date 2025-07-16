@@ -150,7 +150,7 @@ export const fetchDashboardStats = async () => {
 export const fetchKeys = async () => {
     return handleApiCall(
         async () => {
-            const { data } = await apiClient.get('/keys');
+            const { data } = await apiClient.get('/admin/keys');
             return data;
         },
         mockData.keys,
@@ -199,7 +199,7 @@ export const createKey = async (payload: any) => {
         if (!isAvailable) {
             throw new Error('Backend không khả dụng. Vui lòng thử lại sau.');
         }
-        const { data } = await apiClient.post('/keys', payload);
+        const { data } = await apiClient.post('/admin/keys', payload);
         return data;
     } catch (error) {
         console.error('Error creating key:', error);
@@ -213,7 +213,7 @@ export const updateCredit = async (key: string, amount: number) => {
         if (!isAvailable) {
             throw new Error('Backend không khả dụng. Vui lòng thử lại sau.');
         }
-        const { data } = await apiClient.post('/keys/update-credit', { key, amount });
+        const { data } = await apiClient.post('/admin/keys/update-credit', { key, amount });
         return data;
     } catch (error) {
         console.error('Error updating credit:', error);
@@ -227,7 +227,7 @@ export const updateKeyDetails = async (keyId: string, payload: any) => {
         if (!isAvailable) {
             throw new Error('Backend không khả dụng. Vui lòng thử lại sau.');
         }
-        const { data } = await apiClient.put(`/keys/${keyId}/details`, payload);
+        const { data } = await apiClient.put(`/admin/keys/${keyId}/details`, payload);
         return data;
     } catch (error) {
         console.error('Error updating key details:', error);
@@ -241,7 +241,7 @@ export const updateKeyStatus = async (keyId: string, isActive: boolean) => {
         if (!isAvailable) {
             throw new Error('Backend không khả dụng. Vui lòng thử lại sau.');
         }
-        const { data } = await apiClient.put(`/keys/${keyId}/status`, { isActive });
+        const { data } = await apiClient.put(`/admin/keys/${keyId}/status`, { isActive });
         return data;
     } catch (error) {
         console.error('Error updating key status:', error);
