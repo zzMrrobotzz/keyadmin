@@ -263,13 +263,15 @@ export const createApiProvider = async (name: string) => {
     }
 };
 
-export const addApiKeyToProvider = async (providerId: string, apiKey: any) => {
+export const addApiKeyToProvider = async (providerId: string, apiKey: string) => {
     try {
         const isAvailable = await checkBackendStatus();
         if (!isAvailable) {
             throw new Error('Backend không khả dụng. Vui lòng thử lại sau.');
         }
-        const { data } = await apiClient.post(`/providers/${providerId}/keys`, apiKey);
+        // FIX: Wrap the apiKey string in an object with the key "apiKey"
+        const payload = { apiKey: apiKey };
+        const { data } = await apiClient.post(`/providers/${providerId}/keys`, payload);
         return data;
     } catch (error) {
         console.error('Error adding key to provider:', error);
