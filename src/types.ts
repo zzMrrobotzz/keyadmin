@@ -3,6 +3,7 @@ export type AdminActiveModule =
   | 'keyManagement' // Hợp nhất user và key
   | 'apiProviders' // Quản lý API provider keys
   | 'apiKeyPool' // Quản lý kho API key
+  | 'proxyManagement' // Quản lý proxy
   | 'billing'
   | 'suspiciousActivity'
   | 'apis'
@@ -108,4 +109,82 @@ export interface ManagedApiProvider {
   totalRequests: number;
   lastChecked: string;
   apiKeys: string[]; // Thêm trường còn thiếu
+}
+
+// Proxy Management Types
+export interface ProxyItem {
+  _id: string;
+  name: string;
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  protocol: 'http' | 'https' | 'socks4' | 'socks5';
+  isActive: boolean;
+  location: string;
+  provider: string;
+  lastUsed?: string;
+  successCount: number;
+  failureCount: number;
+  avgResponseTime: number;
+  assignedApiKey?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProxyStats {
+  totalRequests: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+  avgResponseTime: number;
+  lastUsed?: string;
+  isAssigned: boolean;
+}
+
+export interface ProxyTestResult {
+  success: boolean;
+  ip?: string;
+  responseTime?: number;
+  error?: string;
+  message: string;
+}
+
+export interface ProxyBatchTestResult {
+  results: Array<{
+    proxyId: string;
+    name: string;
+    host: string;
+    port: number;
+    success: boolean;
+    responseTime?: number;
+    error?: string;
+  }>;
+  summary: {
+    total: number;
+    success: number;
+    failed: number;
+    successRate: number;
+  };
+}
+
+export interface ProxyStatistics {
+  overview: {
+    total: number;
+    active: number;
+    assigned: number;
+    available: number;
+    recentActivity: number;
+    assignmentRate: number;
+  };
+  locationStats: Array<{ _id: string; count: number }>;
+  protocolStats: Array<{ _id: string; count: number }>;
+  providerStats: Array<{ _id: string; count: number }>;
+  topPerformers?: Array<{
+    name: string;
+    endpoint: string;
+    successRate: number;
+    avgResponseTime: number;
+  }>;
 } 

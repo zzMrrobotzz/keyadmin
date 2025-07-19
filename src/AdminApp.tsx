@@ -8,6 +8,7 @@ import AdminBilling from './pages/AdminBilling';
 import AdminSuspiciousActivity from './pages/AdminSuspiciousActivity';
 import AdminLogin from './pages/AdminLogin';
 import AdminApiKeyPool from './pages/AdminApiKeyPool';
+import AdminProxyManagement from './pages/AdminProxyManagement';
 import AdminSettings from './pages/AdminSettings';
 import { AdminActiveModule } from './types';
 
@@ -34,6 +35,8 @@ const AdminApp: React.FC = () => {
         return <AdminApiProviders />;
       case 'apiKeyPool':
         return <AdminApiKeyPool />;
+      case 'proxyManagement':
+        return <AdminProxyManagement />;
       case 'apis':
         return <AdminApiMonitoring />;
       case 'billing': 
