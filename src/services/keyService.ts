@@ -100,16 +100,19 @@ export const getBackendStatus = () => isBackendAvailable;
 const checkBackendStatus = async () => {
     const now = Date.now();
     if (now - lastBackendCheck < BACKEND_CHECK_INTERVAL) {
+        console.log('📋 Using cached backend status:', isBackendAvailable);
         return isBackendAvailable;
     }
 
     try {
-        await apiClient.get('/status');
+        console.log('🔍 Checking backend status...');
+        const response = await apiClient.get('/status');
+        console.log('✅ Backend status check successful:', response.data);
         isBackendAvailable = true;
         lastBackendCheck = now;
         return true;
-    } catch (error) {
-        console.warn('Backend unavailable, using fallback data:', error.message);
+    } catch (error: any) {
+        console.warn('❌ Backend unavailable, using fallback data:', error.message);
         isBackendAvailable = false;
         lastBackendCheck = now;
         return false;
@@ -177,8 +180,10 @@ export const fetchKeys = async () => {
 export const fetchApiProviders = async () => {
     return handleApiCall(
         async () => {
-            const { data } = await apiClient.get('/providers');
-            return data;
+            console.log('📡 Fetching API providers...');
+            const response = await apiClient.get('/providers');
+            console.log('✅ API providers response:', response.data);
+            return response.data;
         },
         mockData.providers,
         'fetchApiProviders'
