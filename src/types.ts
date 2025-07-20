@@ -5,6 +5,8 @@ export type AdminActiveModule =
   | 'apiKeyPool' // Quản lý kho API key
   | 'proxyManagement' // Quản lý proxy
   | 'billing'
+  | 'bankInfo' // Quản lý thông tin ngân hàng
+  | 'creditPackages' // Quản lý gói credit
   | 'suspiciousActivity'
   | 'apis'
   | 'settings';

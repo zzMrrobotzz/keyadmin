@@ -10,6 +10,8 @@ import AdminLogin from './pages/AdminLogin';
 import AdminApiKeyPool from './pages/AdminApiKeyPool';
 import AdminProxyManagement from './pages/AdminProxyManagement';
 import AdminSettings from './pages/AdminSettings';
+import AdminBankInfo from './pages/AdminBankInfo';
+import AdminCreditPackages from './pages/AdminCreditPackages';
 import { AdminActiveModule } from './types';
 
 const AdminApp: React.FC = () => {
@@ -41,6 +43,10 @@ const AdminApp: React.FC = () => {
         return <AdminApiMonitoring />;
       case 'billing': 
         return <AdminBilling />;
+      case 'bankInfo':
+        return <AdminBankInfo />;
+      case 'creditPackages':
+        return <AdminCreditPackages />;
       case 'suspiciousActivity':
         return <AdminSuspiciousActivity />;
       case 'settings':
