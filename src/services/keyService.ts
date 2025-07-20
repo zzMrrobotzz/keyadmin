@@ -139,8 +139,21 @@ const handleApiCall = async (apiCall: () => Promise<any>, fallbackData: any, con
 export const fetchDashboardStats = async () => {
     return handleApiCall(
         async () => {
-            const { data } = await apiClient.get('/stats/dashboard');
-            return data;
+            const response = await apiClient.get('/stats/dashboard');
+            if (response.data.success) {
+                // Transform backend format to expected frontend format
+                const stats = response.data;
+                return {
+                    totalKeys: stats.keyStats?.total || 0,
+                    activeKeys: stats.keyStats?.active || 0,
+                    totalRevenue: stats.billingStats?.totalRevenue || 0,
+                    monthlyRevenue: stats.billingStats?.todayRevenue || 0,
+                    billingStats: stats.billingStats,
+                    apiUsageStats: stats.apiUsageStats,
+                    keyUsage: [] // Will implement chart data later
+                };
+            }
+            throw new Error('API response not successful');
         },
         mockData.dashboardStats,
         'fetchDashboardStats'
@@ -150,8 +163,11 @@ export const fetchDashboardStats = async () => {
 export const fetchKeys = async () => {
     return handleApiCall(
         async () => {
-            const { data } = await apiClient.get('/admin/keys');
-            return data;
+            const response = await apiClient.get('/admin/keys');
+            if (response.data.success) {
+                return response.data.keys || [];
+            }
+            throw new Error('API response not successful');
         },
         mockData.keys,
         'fetchKeys'
