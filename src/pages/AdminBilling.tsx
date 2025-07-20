@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, message, Modal, Form, Input, InputNumber, Switch, Popconfirm, Space } from 'antd';
-import { fetchPackages, createPackage, updatePackage, deletePackage } from '../services/keyService';
-import { CreditPackage } from '../types'; // Sẽ cần cập nhật type này
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Button, Table, message, Modal, Form, Input, InputNumber, Switch, Popconfirm, Space, Typography } from 'antd';
+import { CreditPackage } from '../types';
+import { PlusOutlined, EditOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
+
+const { Title, Text } = Typography;
 
 const AdminBilling: React.FC = () => {
     const [packages, setPackages] = useState<CreditPackage[]>([]);
@@ -14,10 +15,19 @@ const AdminBilling: React.FC = () => {
     const loadPackages = async () => {
         setLoading(true);
         try {
-            const data = await fetchPackages();
-            setPackages(data || []);
+            const response = await fetch('https://key-manager-backend.onrender.com/api/packages');
+            const data = await response.json();
+            
+            if (data.success) {
+                setPackages(data.packages || []);
+            } else {
+                message.error('Không thể tải danh sách gói cước');
+                setPackages([]);
+            }
         } catch (error: any) {
-            message.error(error.message || 'Không thể tải danh sách gói cước');
+            console.error('Error loading packages:', error);
+            message.error('Không thể tải danh sách gói cước');
+            setPackages([]);
         } finally {
             setLoading(false);
         }
@@ -41,28 +51,51 @@ const AdminBilling: React.FC = () => {
 
     const handleDelete = async (packageId: string) => {
         try {
-            await deletePackage(packageId);
-            message.success('Xóa gói cước thành công!');
-            loadPackages();
+            const response = await fetch(`https://key-manager-backend.onrender.com/api/packages/${packageId}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                message.success('Xóa gói cước thành công!');
+                loadPackages();
+            } else {
+                message.error(data.error || 'Xóa gói cước thất bại');
+            }
         } catch (error: any) {
-            message.error(error.message || 'Xóa gói cước thất bại');
+            console.error('Error deleting package:', error);
+            message.error('Xóa gói cước thất bại');
         }
     };
 
     const handleFormSubmit = async () => {
         try {
             const values = await form.validateFields();
-            if (editingPackage) {
-                await updatePackage(editingPackage._id, values);
-                message.success('Cập nhật gói cước thành công!');
+            const isEdit = editingPackage?._id;
+            const url = isEdit 
+                ? `https://key-manager-backend.onrender.com/api/packages/${editingPackage._id}`
+                : 'https://key-manager-backend.onrender.com/api/packages';
+            
+            const response = await fetch(url, {
+                method: isEdit ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(values),
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                message.success(isEdit ? 'Cập nhật gói cước thành công!' : 'Tạo gói cước mới thành công!');
+                setIsModalVisible(false);
+                loadPackages();
             } else {
-                await createPackage(values);
-                message.success('Tạo gói cước mới thành công!');
+                message.error(data.error || 'Thao tác thất bại');
             }
-            setIsModalVisible(false);
-            loadPackages();
         } catch (error: any) {
-            message.error(error.message || 'Thao tác thất bại');
+            console.error('Error saving package:', error);
+            message.error('Thao tác thất bại');
         }
     };
 
@@ -93,20 +126,30 @@ const AdminBilling: React.FC = () => {
     ];
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-800">Quản Lý Gói Cước</h1>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>
-                    Thêm Gói Mới
-                </Button>
-            </div>
-            <Card>
+        <div style={{ padding: 24 }}>
+            <Title level={2}>
+                <DollarOutlined /> Gói Cước & Thanh Toán
+            </Title>
+            <Text type="secondary">
+                Quản lý các gói nạp credit và theo dõi thanh toán
+            </Text>
+            
+            <Card 
+                title="Danh Sách Gói Credit"
+                extra={
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>
+                        Thêm Gói Mới
+                    </Button>
+                }
+                style={{ marginTop: 16 }}
+            >
                 <Table
                     columns={columns}
                     dataSource={packages}
                     loading={loading}
                     rowKey="_id"
                     pagination={false}
+                    locale={{ emptyText: 'Chưa có gói credit nào' }}
                 />
             </Card>
             <Modal
