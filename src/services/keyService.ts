@@ -197,9 +197,9 @@ export const fetchDailyApiStats = async () => {
     return handleApiCall(
         async () => {
             console.log('📡 Fetching daily API stats...');
-            const response = await apiClient.get('/stats/daily-api-usage');
+            const response = await apiClient.get('/admin/stats/daily-requests');
             console.log('✅ Daily API stats response:', response.data);
-            return response.data;
+            return response.data?.data || response.data;
         },
         [], // Mock empty data for now
         'fetchDailyApiStats'

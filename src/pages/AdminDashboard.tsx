@@ -50,12 +50,16 @@ const AdminDashboard: React.FC = () => {
 
             // Merge daily API stats with providers data
             let mergedProviders = providersData || [];
-            if (Array.isArray(dailyApiData) && dailyApiData.length > 0) {
+            if (dailyApiData && Array.isArray(dailyApiData.providers) && dailyApiData.providers.length > 0) {
                 mergedProviders = mergedProviders.map(provider => {
-                    const dailyStats = dailyApiData.find(daily => daily.provider?.toLowerCase() === provider.name?.toLowerCase());
+                    const dailyStats = dailyApiData.providers.find(daily => daily.name?.toLowerCase() === provider.name?.toLowerCase());
                     return {
                         ...provider,
-                        dailyRequests: dailyStats?.requests || 0
+                        dailyRequests: dailyStats?.dailyRequests || 0,
+                        successfulRequests: dailyStats?.successfulRequests || 0,
+                        failedRequests: dailyStats?.failedRequests || 0,
+                        successRate: dailyStats?.successRate || '0%',
+                        totalTokensToday: dailyStats?.totalTokensToday || 0
                     };
                 });
             }
@@ -155,6 +159,9 @@ const AdminDashboard: React.FC = () => {
                         {apiProviders.map((provider, index) => {
                             const dailyRequests = provider.dailyRequests || 0;
                             const costToday = provider.costToday || 0;
+                            const successRate = provider.successRate || '0%';
+                            const successfulRequests = provider.successfulRequests || 0;
+                            const failedRequests = provider.failedRequests || 0;
                             return (
                                 <Col span={6} key={provider._id || index}>
                                     <AntCard size="small" className="h-full">
@@ -162,6 +169,9 @@ const AdminDashboard: React.FC = () => {
                                             <div className="text-lg font-semibold text-gray-800">{provider.name}</div>
                                             <div className="text-2xl font-bold text-blue-600 my-2">{formatNumber(dailyRequests)}</div>
                                             <div className="text-sm text-gray-500">requests hôm nay</div>
+                                            <div className="text-xs text-gray-400 mb-1">
+                                                ✅ {successfulRequests} • ❌ {failedRequests} • {successRate}
+                                            </div>
                                             <div className="text-sm text-green-600 font-medium">${costToday.toFixed(2)}</div>
                                             <div className={`inline-block w-2 h-2 rounded-full mt-1 ${
                                                 provider.status === 'Operational' ? 'bg-green-500' : 
