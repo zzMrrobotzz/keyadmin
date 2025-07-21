@@ -110,6 +110,11 @@ export interface ManagedApiProvider {
   costToday: number;
   totalRequests: number;
   dailyRequests?: number; // Thống kê request hôm nay
+  successfulRequests?: number; // Request thành công hôm nay
+  failedRequests?: number; // Request thất bại hôm nay
+  successRate?: string; // Tỷ lệ thành công (%)
+  totalTokensToday?: number; // Tổng tokens sử dụng hôm nay
+  avgResponseTime?: number; // Thời gian phản hồi trung bình (ms)
   lastChecked: string;
   apiKeys: string[]; // Thêm trường còn thiếu
 }
