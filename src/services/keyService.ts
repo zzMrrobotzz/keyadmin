@@ -190,6 +190,22 @@ export const fetchApiProviders = async () => {
     );
 };
 
+/**
+ * Lấy thống kê chi tiết các API requests hôm nay theo từng provider.
+ */
+export const fetchDailyApiStats = async () => {
+    return handleApiCall(
+        async () => {
+            console.log('📡 Fetching daily API stats...');
+            const response = await apiClient.get('/stats/daily-api-usage');
+            console.log('✅ Daily API stats response:', response.data);
+            return response.data;
+        },
+        [], // Mock empty data for now
+        'fetchDailyApiStats'
+    );
+};
+
 export const fetchAuditLogs = async () => {
     return handleApiCall(
         async () => {

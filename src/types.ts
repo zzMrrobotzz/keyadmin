@@ -109,6 +109,7 @@ export interface ManagedApiProvider {
   status: 'Operational' | 'Degraded' | 'Error' | 'Unknown'; // Đồng bộ với backend
   costToday: number;
   totalRequests: number;
+  dailyRequests?: number; // Thống kê request hôm nay
   lastChecked: string;
   apiKeys: string[]; // Thêm trường còn thiếu
 }
